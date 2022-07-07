@@ -55,14 +55,7 @@
             Grid mode
           </label>
         </div>
-        <!--Transparent wavelets switch-->
-        <div class="form-check mb-3">
-          <input class="form-check-input" type="checkbox" v-model="transparentMode" id="tr-checkbox">
-          <label class="form-check-label" for="tr-checkbox" style="color: white">
-            Transparent <sup class="text-warning fw-lighter">higher load</sup>
-          </label>
-        </div>
-        <!--Transparent wavelets switch-->
+        <!--Simulate wavelets switch-->
         <div class="form-check mb-3">
           <input class="form-check-input" type="checkbox" v-model="simulationMode" id="sim-checkbox" @change="simulationSwitched">
           <label class="form-check-label" for="sim-checkbox" style="color: white">
@@ -74,6 +67,15 @@
           <input class="form-check-input" type="checkbox" v-model="isColorWavelets" id="color-wavelets-checkbox">
           <label class="form-check-label" for="color-wavelets-checkbox" style="color: white">
             Color wavelets
+          </label>
+        </div>
+        <hr>
+
+        <!--Transparent wavelets switch-->
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" v-model="transparentMode" id="tr-checkbox">
+          <label class="form-check-label" for="tr-checkbox" style="color: white">
+            Transparent <sup class="text-warning fw-lighter">higher load</sup>
           </label>
         </div>
       </div>
@@ -223,8 +225,8 @@ const isColorWavelets = ref(false)
   position: absolute
   left: 0
   top: 0
-  width: 1920px
-  height: 1080px
+  right: 0
+  bottom: 0
   background-color: #000
   overflow: hidden
 
