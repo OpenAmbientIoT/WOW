@@ -4,8 +4,8 @@
     <!-- Wavelets to display -->
     <template v-for="[key, wavelet] in wavelets" :key="key">
       <div :class="'wavelet' + ' t-' + wavelet.data.value"
-           :style="('left:' + wavelet.x + 'px; top:' + wavelet.y + 'px;')
-           + ('width: ' + waveletSize + 'px;' + 'height: ' + waveletSize + 'px;' + 'transform: translate('+ -waveletSize/2 + 'px, '+ -waveletSize/2 + 'px)')">
+           :style="('left:' + (wavelet.x - waveletSize/2) + 'px; top:' + (wavelet.y - waveletSize/2) + 'px;')
+           + ('width: ' + waveletSize + 'px;' + 'height: ' + waveletSize + 'px;')">
         <span class="wavelet__value" :style="`color: ${wavelet.color}; font-size: ${waveletSize/10 < 6 ? 6 : waveletSize/10}px;`">{{
             wavelet.data.value ? wavelet.data.value : '-'
           }}°</span>
@@ -17,8 +17,8 @@
     <!-- Grid mode enabled -->
     <template v-if="gridMode">
       <template v-for="[key, map] in id_map" :key="key">
-        <div class="wavelet wavelet_eternal" :style="('left:' + map.x + 'px; top:' + map.y + 'px;')
-        + ('width: ' + waveletSize + 'px;' + 'height: ' + waveletSize + 'px;' + 'transform: translate('+ -waveletSize/2 + 'px, '+ -waveletSize/2 + 'px)')"></div>
+        <div class="wavelet wavelet_eternal" :style="('left:' + (map.x - waveletSize/2) + 'px; top:' + (map.y - waveletSize/2) + 'px;')
+        + ('width: ' + waveletSize + 'px;' + 'height: ' + waveletSize + 'px;')"></div>
       </template>
 
       <!-- Coordinates tooltip -->
@@ -299,9 +299,6 @@ body
   background-size: contain
   background-position: center
   position: absolute
-  width: 128px
-  height: 128px
-  transform: translate(-64px, -64px)
 
 
   // This is two hiding modificators for further animation restart implementation
