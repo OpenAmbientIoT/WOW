@@ -200,7 +200,7 @@ function runSimulation() {
   //wavelets.value.set(obj.data.tag, obj)
   const message = generateMessage()
   render(message)
-  setTimeout(runSimulation, Math.floor(Math.random() * 100) + 1)
+  setTimeout(runSimulation, Math.floor(Math.random() * 10) + 1)
 }
 
 function clearOld() {
