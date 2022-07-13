@@ -2,37 +2,16 @@
   <div class="display">
     <!-- Wavelets to display -->
     <template v-for="[key, wavelet] in wavelets" :key="key">
-      <div :class="(transparentMode ? 'trwavelet' : 'wavelet') + ' t-' + wavelet.data.value" :style="'left:' + wavelet.x + 'px; top:' + wavelet.y + 'px;'">
-        <span :class="transparentMode ? 'trwavelet__value' : 'wavelet__value'" :style="`color: ${wavelet.color}`">{{ wavelet.data.value ? wavelet.data.value : '-' }}°</span>
-        <div v-if="!transparentMode && isColorWavelets" class="wavelet-coloring" :style="`background-color: ${wavelet.color}`"></div>
-        <div class="circles" v-if="transparentMode">
-          <div class="circle_pulse" :style="isColorWavelets ? `border-color: ${wavelet.color}` : ''"></div>
-          <div class="circle_pulse" :style="isColorWavelets ? `border-color: ${wavelet.color}` : ''"></div>
-          <div class="circle_pulse" :style="isColorWavelets ? `border-color: ${wavelet.color}` : ''"></div>
-          <div class="circle_pulse" :style="isColorWavelets ? `border-color: ${wavelet.color}` : ''"></div>
-          <div class="circle_pulse" :style="isColorWavelets ? `border-color: ${wavelet.color}` : ''"></div>
-          <div class="circle_pulse" :style="isColorWavelets ? `border-color: ${wavelet.color}` : ''"></div>
-          <div class="circle_pulse" :style="isColorWavelets ? `border-color: ${wavelet.color}` : ''"></div>
-          <div class="circle_pulse" :style="isColorWavelets ? `border-color: ${wavelet.color}` : ''"></div>
-        </div>
+      <div :class="'wavelet' + ' t-' + wavelet.data.value" :style="'left:' + wavelet.x + 'px; top:' + wavelet.y + 'px;'">
+        <span class="wavelet__value" :style="`color: ${wavelet.color}`">{{ wavelet.data.value ? wavelet.data.value : '-' }}°</span>
+        <div v-if="isColorWavelets" class="wavelet-coloring" :style="`background-color: ${wavelet.color}`"></div>
       </div>
     </template>
 
-    <!-- Grid mode -->
+    <!-- Grid mode enabled -->
     <template v-if="gridMode">
       <template v-for="[key, map] in id_map" :key="key">
-        <div :class="(transparentMode ? 'trwavelet trwavelet_eternal' : 'wavelet wavelet_eternal')" :style="'left:' + map.x + 'px; top:' + map.y + 'px;'">
-          <div class="circles" v-if="transparentMode">
-            <div class="circle_pulse"></div>
-            <div class="circle_pulse"></div>
-            <div class="circle_pulse"></div>
-            <div class="circle_pulse"></div>
-            <div class="circle_pulse"></div>
-            <div class="circle_pulse"></div>
-            <div class="circle_pulse"></div>
-            <div class="circle_pulse"></div>
-          </div>
-        </div>
+        <div class="wavelet wavelet_eternal" :style="'left:' + map.x + 'px; top:' + map.y + 'px;'"></div>
       </template>
     </template>
 
@@ -69,15 +48,8 @@
             Color wavelets
           </label>
         </div>
-        <hr>
 
-        <!--Transparent wavelets switch-->
-        <div class="form-check mb-3">
-          <input class="form-check-input" type="checkbox" v-model="transparentMode" id="tr-checkbox">
-          <label class="form-check-label" for="tr-checkbox" style="color: white">
-            Transparent <sup class="text-warning fw-lighter">higher load</sup>
-          </label>
-        </div>
+        <hr>
       </div>
 
     </div>
@@ -90,7 +62,6 @@ import {ref, onMounted} from 'vue'
 const wavelets = ref(new Map())
 const id_map = ref(new Map())
 const gridMode = ref(false)
-const transparentMode = ref(false)
 
 import mqttclient from "@/assets/js/mqttclient";
 import MessageParser from "@/assets/js/classes/MessageParser";
@@ -108,6 +79,7 @@ function disconnect() {
 }
 
 import {rgbColor} from "@/assets/js/helpers/temperaturecolor"
+import {humanReadableTime} from "@/assets/js/helpers/time"
 function render(message) {
   if (gridMode.value === true) {
     return false
@@ -123,13 +95,16 @@ function render(message) {
       wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
     }
     // Get element coordinates
+
+
+    const timestamp = wavelet.data.timestamp
     const coordinates = id_map.value.get(wavelet.data.tag)
     if (coordinates) {
-      console.log('Tag ' + wavelet.data.tag + ' is in map. Render.');
+      console.log('Tag ' + wavelet.data.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is in map. Render.')
       wavelet.inject(coordinates)
       wavelets.value.set(wavelet.data.tag, wavelet)
     } else {
-      console.log('Tag ' + wavelet.data.tag + ' is not in map!');
+      console.log('Tag ' + wavelet.data.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is not in map!')
     }
   }
 }
@@ -239,12 +214,23 @@ const isColorWavelets = ref(false)
   width: 128px
   height: 128px
   //transform: translate(-30px, -30px)
-  //-moz-animation: hidingAnimation .4s ease-in 9s forwards
-  //-webkit-animation: hidingAnimation .4s ease-in 9s forwards
-  //-o-animation: hidingAnimation .4s ease-in 9s forwards
-  //animation: hidingAnimation .4s ease-in 9s forwards
-  //-webkit-animation-fill-mode: forwards
-  //animation-fill-mode: forwards
+
+  // This is two hiding modificators for further animation restart implementation
+  &_hiding1
+    -moz-animation: hidingAnimation1 .4s ease-in 9s forwards
+    -webkit-animation: hidingAnimation1 .4s ease-in 9s forwards
+    -o-animation: hidingAnimation1 .4s ease-in 9s forwards
+    animation: hidingAnimation1 .4s ease-in 9s forwards
+    -webkit-animation-fill-mode: forwards
+    animation-fill-mode: forwards
+
+  &_hiding2
+    -moz-animation: hidingAnimation2 .4s ease-in 9s forwards
+    -webkit-animation: hidingAnimation2 .4s ease-in 9s forwards
+    -o-animation: hidingAnimation2 .4s ease-in 9s forwards
+    animation: hidingAnimation2 .4s ease-in 9s forwards
+    -webkit-animation-fill-mode: forwards
+    animation-fill-mode: forwards
 
   &_eternal
     -moz-animation: none
@@ -269,130 +255,24 @@ const isColorWavelets = ref(false)
     border-radius: 6px
     z-index: 110
 
-.trwavelet
-  position: absolute
-  width: 128px
-  height: 128px
-  //-moz-animation: hidingAnimation .4s ease-in 9s forwards
-  //-webkit-animation: hidingAnimation .4s ease-in 9s forwards
-  //-o-animation: hidingAnimation .4s ease-in 9s forwards
-  //animation: hidingAnimation .4s ease-in 9s forwards
-  //-webkit-animation-fill-mode: forwards
-  //animation-fill-mode: forwards
 
-  &_eternal
-    -moz-animation: none
-    -webkit-animation: none
-    -o-animation: none
-    animation: none
-    -webkit-animation-fill-mode: none
-    animation-fill-mode: none
-
-  &__value
-    color: rgba(255, 255, 255, .9)
-    background-color: black
-    display: inline-block
-    position: absolute
-    left: 50%
-    transform: translateX(-50%)
-    top: 20px
-    font-size: 12px
-    font-weight: 900
-    padding: 0 4px
-    text-align: center
-    border-radius: 6px
-    z-index: 110
-
-  .circles
-    position: absolute
-    width: 128px
-    height: 128px
-    left: 0
-    top: 0
-    z-index: 100
-
-  .circle_pulse
-    -webkit-animation: pulse 2.8s infinite
-    animation: pulse 2.8s infinite
-    border: 1px solid white
-    width: 64px
-    height: 64px
-    top: 32px
-    left: 32px
-    position: absolute
-    transform: translate3d(0,0,0)
-    transform-origin: center center
-    margin: 0 auto
-    border-radius: 100%
-    opacity: 0
-    z-index: -1
-    box-shadow: inset 0 0 0 0 #000
-    .trwavelet_eternal &
-      -moz-animation: none
-      -webkit-animation: none
-      -o-animation: none
-      animation: none
-      -webkit-animation-fill-mode: none
-      animation-fill-mode: none
-
-  .circle_pulse:nth-child(2)
-    -webkit-animation-delay: .4s
-    animation-delay: .4s
-
-  .circle_pulse:nth-child(3)
-    -webkit-animation-delay: .8s
-    animation-delay: .8s
-
-  .circle_pulse:nth-child(4)
-    -webkit-animation-delay: 1.2s
-    animation-delay: 1.2s
-
-  .circle_pulse:nth-child(5)
-    -webkit-animation-delay: 1.6s
-    animation-delay: 1.6s
-
-  .circle_pulse:nth-child(6)
-    -webkit-animation-delay: 2s
-    animation-delay: 2s
-
-  .circle_pulse:nth-child(7)
-    -webkit-animation-delay: 2.4s
-    animation-delay: 2.4s
-
-  .circle_pulse:nth-child(8)
-    -webkit-animation-delay: 2.8s
-    animation-delay: 2.8s
-
-@-webkit-keyframes pulse
-  0%
-    transform: scale(.9)
-    opacity: .1
-  20%
+@-webkit-keyframes hidingAnimation1
+  from
     opacity: 1
-  100%
-    transform: scale(2)
+  to
     opacity: 0
-    box-shadow: inset 0 0 1px 1px #000
-
-@keyframes pulse
-  0%
-    transform: scale(.9)
-    opacity: .1
-  20%
-    opacity: 1
-  100%
-    transform: scale(2)
-    opacity: 0
-    box-shadow: inset 0 0 1px 1px #000
-
-
-@-webkit-keyframes hidingAnimation
+@keyframes hidingAnimation1
   from
     opacity: 1
   to
     opacity: 0
 
-@keyframes hidingAnimation
+@-webkit-keyframes hidingAnimation2
+  from
+    opacity: 1
+  to
+    opacity: 0
+@keyframes hidingAnimation2
   from
     opacity: 1
   to
@@ -426,5 +306,6 @@ const isColorWavelets = ref(false)
   right: 0
   bottom: 0
   left: 0
+  border-radius: 100%
   mix-blend-mode: multiply
 </style>

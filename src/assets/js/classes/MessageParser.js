@@ -26,7 +26,7 @@ export default class MessageParser {
                             event.raw = msg.replace('eventValue=', '')
                         }
                         if (msg.includes('timestamp')) {
-                            event.timestamp = msg.replace('timestamp=', '')
+                            event.timestamp = parseInt(msg.replace('timestamp=', ''))
                         }
                     })
                     return event
