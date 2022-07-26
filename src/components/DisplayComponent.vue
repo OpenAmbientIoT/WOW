@@ -3,6 +3,8 @@
        :style="(gridMode && crosshairCursor ? 'cursor: crosshair;' : '') + (gridMode ? 'box-shadow: inset 0 0 0 2px wheat;' : '')">
     <!-- Wavelets to display -->
     <template v-for="[key, wavelet] in wavelets" :key="key">
+      <div class="shine" :style="('left:' + (wavelet.x - waveletSize*1.5/2) + 'px; top:' + (wavelet.y - waveletSize*1.5/2) + 'px;')
+           + ('width: ' + waveletSize*1.5 + 'px;' + 'height: ' + waveletSize*1.5 + 'px;')"></div>
       <div :class="'wavelet' + ' t-' + wavelet.data.value"
            :style="('left:' + (wavelet.x - waveletSize/2) + 'px; top:' + (wavelet.y - waveletSize/2) + 'px;')
            + ('width: ' + waveletSize + 'px;' + 'height: ' + waveletSize + 'px;')">
@@ -360,6 +362,11 @@ body
     border-radius: 6px
     z-index: 110
 
+.shine
+  background-image: url('@/assets/shinea.gif')
+  background-size: contain
+  background-position: center
+  position: absolute
 
 @-webkit-keyframes hidingAnimation1
   from
