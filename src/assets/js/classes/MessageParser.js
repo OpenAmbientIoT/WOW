@@ -6,6 +6,8 @@ export default class MessageParser {
     }
 
     static extract(string, type = 'events') {
+        console.log('\n\nReceived message')
+        console.log(string)
         //events,tagId=(01)00850027865010(21)00oeT4035,eventName=TEMP_C,eventValue=15.53504436835706,timestamp=1655924635
         const message_pieces = trim(string, '"').split(',')
         // Get only events

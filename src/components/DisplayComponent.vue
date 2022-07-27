@@ -3,24 +3,14 @@
        :style="(gridMode && crosshairCursor ? 'cursor: crosshair;' : '') + (gridMode ? 'box-shadow: inset 0 0 0 2px wheat;' : '')">
     <!-- Wavelets to display -->
     <template v-for="[key, wavelet] in wavelets" :key="key">
-      <div class="shine" :style="('left:' + (wavelet.x - waveletSize*1.5/2) + 'px; top:' + (wavelet.y - waveletSize*1.5/2) + 'px;')
-           + ('width: ' + waveletSize*1.5 + 'px;' + 'height: ' + waveletSize*1.5 + 'px;')"></div>
-      <div :class="'wavelet' + ' t-' + wavelet.data.value"
-           :style="('left:' + (wavelet.x - waveletSize/2) + 'px; top:' + (wavelet.y - waveletSize/2) + 'px;')
-           + ('width: ' + waveletSize + 'px;' + 'height: ' + waveletSize + 'px;')">
-        <span class="wavelet__value" :style="`color: ${wavelet.color}; font-size: ${waveletSize/10 < 6 ? 6 : waveletSize/10}px;`">{{
-            wavelet.data.value ? wavelet.data.value : '-'
-          }}°</span>
-        <div v-if="isColorWavelets" class="wavelet-coloring" :style="`background-color: ${wavelet.color}`"></div>
-      </div>
+      <WaveletComponent :wavelet="wavelet"/>
     </template>
 
 
     <!-- Grid mode enabled -->
     <template v-if="gridMode">
       <template v-for="[key, map] in id_map" :key="key">
-        <div class="wavelet wavelet_eternal" :style="('left:' + (map.x - waveletSize/2) + 'px; top:' + (map.y - waveletSize/2) + 'px;')
-        + ('width: ' + waveletSize + 'px;' + 'height: ' + waveletSize + 'px;')"></div>
+        <GridWaveletComponent :size="waveletSize" :map="map" />
       </template>
 
       <!-- Coordinates tooltip -->
@@ -84,12 +74,34 @@
         <!-- Wavelet size -->
         <div>
           <span class="text-white-50 me-3">Wavelet size</span>
-          <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels" style="max-width: 80px" v-model="waveletSize">
+          <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
+                 style="max-width: 80px" v-model="waveletSize">
           <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 32">32</button>
           <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 64">64</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 128">128</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 196">196</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 256">256</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 128">128
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 196">196
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 256">256
+          </button>
+        </div>
+        <hr>
+
+        <!-- Handle events -->
+        <div>
+          <span class="text-white-50 me-1">Handle events</span>
+          <div class="form-check form-switch mb-1" v-for="eventType in eventsTypes" :key="eventType.name">
+            <input class="form-check-input" type="checkbox" v-model="eventType.enabled" id="color-wavelets-checkbox">
+            <label class="form-check-label" for="color-wavelets-checkbox" style="color: white">
+              {{ eventType.name }}
+            </label>
+          </div>
+          <div class="form-check form-switch mb-1">
+            <input class="form-check-input" type="checkbox" v-model="debugMode" id="debug-wavelets-checkbox">
+            <label class="form-check-label" for="debug-wavelets-checkbox" style="color: rosybrown">
+              Debug mode
+            </label>
+          </div>
         </div>
         <hr>
 
@@ -130,34 +142,50 @@ function disconnect() {
   mqttclient.destroyConnection()
 }
 
+
+import {eventsConfig} from "@/assets/js/classes/events/EventsConfig";
+
+const eventsTypes = reactive(eventsConfig.eventsTypes)
+
 import {rgbColor} from "@/assets/js/helpers/temperaturecolor"
 import {humanReadableTime} from "@/assets/js/helpers/time"
+import WaveletComponent from "@/components/WaveletComponent"
+import GridWaveletComponent from "@/components/GridWaveletComponent"
+import EventsBuilder from "@/assets/js/classes/EventsBuilder";
+
 
 function render(message) {
   if (gridMode.value === true) {
     return false
   }
-  // Create new wavelet element
-  const wavelet = new WaveletElement();
   if (typeof message == 'string') {
     // Get event data
-    const event = MessageParser.extract(message)
+    const event = EventsBuilder.parse(message, eventsTypes)
     if (event) {
-      wavelet.data = event
-      const color = rgbColor(wavelet.data.value)
+      // Create new wavelet element
+      const wavelet = new WaveletElement();
+
+      wavelet.event = event
+      const color = rgbColor(wavelet.event.value)
       wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
-    }
-    // Get element coordinates
+      wavelet.size = waveletSize.value
+      wavelet.colored = isColorWavelets.value
+      wavelet.debug = debugMode.value
 
 
-    const timestamp = wavelet.data.timestamp
-    const coordinates = id_map.value.get(wavelet.data.tag)
-    if (coordinates) {
-      console.log('Tag ' + wavelet.data.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is in map. Render.')
-      wavelet.inject(coordinates)
-      wavelets.value.set(wavelet.data.tag, wavelet)
+      // Get element coordinates
+      console.log(wavelet.event)
+      const timestamp = wavelet.event.timestamp
+      const coordinates = id_map.value.get(wavelet.event.tag)
+      if (coordinates) {
+        console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is in map. Render.')
+        wavelet.inject(coordinates)
+        wavelets.value.set(wavelet.event.tag, wavelet)
+      } else {
+        console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is not in map!')
+      }
     } else {
-      console.log('Tag ' + wavelet.data.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is not in map!')
+      console.log('Skip message ' + message)
     }
   }
 }
@@ -174,7 +202,7 @@ function openFile(event) {
   reader.readAsText(input.files[0]);
 }
 
-// eslint-disable-next-line
+
 const simulationMode = ref(false)
 onMounted(() => {
   if (simulationMode.value === true) {
@@ -224,27 +252,34 @@ function runSimulation() {
     return false
   }
   connectionState.value = !connectionState.value
-  //const obj = generateObject()
-  //wavelets.value.set(obj.data.tag, obj)
   const message = generateMessage()
   render(message)
   setTimeout(runSimulation, Math.floor(Math.random() * 10) + 1)
 }
 
 function clearOld() {
-  const lifetime = 9
+  const lifetime = 10 // seconds
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
     const seconds = Math.floor((now - wavelet.created) / 1000)
+    // A second for fadeout
+    if (seconds >= lifetime - 1) {
+      // Fadeout
+      console.log('Time to fadeout for #' + wavelet.id)
+      wavelet.options.fadeout = true
+    }
+    // Time to remove
     if (seconds >= lifetime) {
-      console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.id)
-      wavelets.value.delete(wavelet.data.tag)
+      console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.id + ' – removing')
+      wavelets.value.delete(wavelet.event.tag)
     }
   })
-  setTimeout(clearOld, 500)
+  setTimeout(clearOld, 1000)
 }
 
+const debugMode = ref(false)
 const isColorWavelets = ref(false)
+const waveletSize = ref(128)
 
 const mouse_x = ref(0)
 const mouse_y = ref(0)
@@ -255,13 +290,13 @@ const mouseTooltip = reactive({
   }
 })
 
-function updateCoordinates(event) {
+function updateCoordinates(e) {
   if (gridMode.value) {
-    mouse_x.value = event.clientX
-    mouse_y.value = event.clientY
+    mouse_x.value = e.clientX
+    mouse_y.value = e.clientY
     // Update mouse tooltip positioning
-    mouseTooltip.position.x = event.clientX
-    mouseTooltip.position.y = event.clientY
+    mouseTooltip.position.x = e.clientX
+    mouseTooltip.position.y = e.clientY
   }
 }
 
@@ -279,13 +314,13 @@ const uiConfiguration = reactive({
   ]
 })
 
-const waveletSize = ref(128)
 
 </script>
 
 <style scoped lang="sass">
 body
   background-color: #000
+
 .display
   position: absolute
   left: 0
@@ -295,109 +330,12 @@ body
   background-color: #000
   overflow: hidden
 
-
-.wavelet
-  background-image: url('@/assets/wavelet-anim.svg')
-  background-size: contain
-  background-position: center
-  position: absolute
-
-
-  // This is two hiding modificators for further animation restart implementation
-  &_hiding1
-    -moz-animation: hidingAnimation1 .4s ease-in 9s forwards
-    -webkit-animation: hidingAnimation1 .4s ease-in 9s forwards
-    -o-animation: hidingAnimation1 .4s ease-in 9s forwards
-    animation: hidingAnimation1 .4s ease-in 9s forwards
-    -webkit-animation-fill-mode: forwards
-    animation-fill-mode: forwards
-
-  &_hiding2
-    -moz-animation: hidingAnimation2 .4s ease-in 9s forwards
-    -webkit-animation: hidingAnimation2 .4s ease-in 9s forwards
-    -o-animation: hidingAnimation2 .4s ease-in 9s forwards
-    animation: hidingAnimation2 .4s ease-in 9s forwards
-    -webkit-animation-fill-mode: forwards
-    animation-fill-mode: forwards
-
-  &_eternal
-    -moz-animation: none
-    -webkit-animation: none
-    -o-animation: none
-    animation: none
-    -webkit-animation-fill-mode: none
-    animation-fill-mode: none
-    opacity: .5
-    // Vertical cross line
-    &:before
-      content: ''
-      display: block
-      width: 1px
-      height: 100%
-      background-color: #fff
-      left: 50%
-      position: absolute
-    // Horizontal cross line
-    &:after
-      content: ''
-      display: block
-      width: 100%
-      height: 1px
-      background-color: #fff
-      top: 50%
-      position: absolute
-
-
-  &__value
-    color: rgba(255, 255, 255, 1)
-    background-color: black
-    display: inline-block
-    position: absolute
-    left: 50%
-    transform: translateX(-50%)
-    top: 10%
-    font-weight: 900
-    padding: 0 4px
-    text-align: center
-    border-radius: 6px
-    z-index: 110
-
-.shine
-  background-image: url('@/assets/shinea.gif')
-  background-size: contain
-  background-position: center
-  position: absolute
-
-@-webkit-keyframes hidingAnimation1
-  from
-    opacity: 1
-  to
-    opacity: 0
-
-@keyframes hidingAnimation1
-  from
-    opacity: 1
-  to
-    opacity: 0
-
-@-webkit-keyframes hidingAnimation2
-  from
-    opacity: 1
-  to
-    opacity: 0
-
-@keyframes hidingAnimation2
-  from
-    opacity: 1
-  to
-    opacity: 0
-
-
 .ui-wrapper
   position: absolute
   width: 260px
   min-height: 600px
   opacity: 1
+  z-index: 9999
 
 
   & > div
@@ -413,15 +351,6 @@ body
   width: 10px
   height: 10px
 
-
-.wavelet-coloring
-  position: absolute
-  top: 0
-  right: 0
-  bottom: 0
-  left: 0
-  border-radius: 100%
-  mix-blend-mode: multiply
 
 .mouse-coordinates-tooltip
   color: wheat

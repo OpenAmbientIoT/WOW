@@ -6,7 +6,11 @@ export default class DisplayElement {
         this.y = 0
         this.created = Date.now()
 
-        this.data = {
+        this.size = 128
+        this.colored = false
+        this.debug = false
+
+        this.event = {
             tag: '',
             name: '',
             value: '',
