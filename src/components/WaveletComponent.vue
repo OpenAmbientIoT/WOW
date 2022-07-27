@@ -13,9 +13,8 @@
       <div v-if="wavelet.colored" class="wavelet-coloring" :style="`background-color: ${wavelet.color}`"></div>
     </div>
   </template>
+  <!-- All other -->
   <template v-else>
-    <div :style="('left:' + (wavelet.x - wavelet.size*1.5/2) + 'px; top:' + (wavelet.y - wavelet.size*1.5/2) + 'px;')
-           + ('width: ' + wavelet.size*1.5 + 'px;' + 'height: ' + wavelet.size*1.5 + 'px;')"></div>
     <div :class="'wavelet' + ' t-' + wavelet.event.value"
          :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
            + ('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;') + ('background-image: url(static/wavelet-anim.svg?v='+generate()+');')">
