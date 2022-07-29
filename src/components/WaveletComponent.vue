@@ -8,7 +8,7 @@
          :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
            + ('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;')">
           <!-- + ('background-image: url(static/wavelet-anim-last-ring.svg?v='+generate()+');') -->
-        <span :class="'wavelet__value' + (wavelet.options.fadeout ? ' d-none' : '')"
+        <span :class="'wavelet__value'"
               :style="`color: ${wavelet.color}; font-size: ${wavelet.size/10 < 6 ? 6 : wavelet.size/10}px;`">{{
             wavelet.event.value ? wavelet.event.value : '-'
           }}°</span>
