@@ -172,7 +172,6 @@ function render(message) {
       wavelet.colored = isColorWavelets.value
       wavelet.debug = debugMode.value
 
-
       // Get element coordinates
       console.log(wavelet.event)
       const timestamp = wavelet.event.timestamp
@@ -204,6 +203,7 @@ function openFile(event) {
 
 
 const simulationMode = ref(false)
+
 onMounted(() => {
   if (simulationMode.value === true) {
     connectionStatus.value = 'green'
@@ -243,7 +243,9 @@ function generateMessage() {
   const max_t = 27
   const tag = '(01)00850027865010(21)00oeT' + (Math.floor(Math.random() * (max - min) + min)).toString()
   const value = (Math.random() * (max_t - min_t) + min_t).toFixed(4)
-  let message = 'events,tagId=' + tag + ',eventName=TEMP_C,eventValue=' + value + ',timestamp=' + Date.now()
+  // Get random event type from the list
+  const eventsType = eventsTypes[Math.floor(Math.random()*eventsTypes.length)];
+  let message = 'events,tagId=' + tag + ',eventName=' + eventsType.name + ',eventValue=' + value + ',timestamp=' + Date.now()
   return message
 }
 
@@ -261,20 +263,28 @@ function clearOld() {
   const lifetime = 10 // seconds
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
-    const seconds = Math.floor((now - wavelet.created) / 1000)
-    // A second for fadeout
-    if (seconds >= lifetime - 1) {
+    const milliseconds = now - wavelet.created
+    const seconds = Math.floor(milliseconds / 1000)
+
+    if (!wavelet.options.fadein) {
+      // Fadein
+      console.log('Time to fadein for #' + wavelet.id)
+      wavelet.options.fadein = true
+    }
+
+    if (seconds >= lifetime - 1 && !wavelet.options.fadeout) {
       // Fadeout
       console.log('Time to fadeout for #' + wavelet.id)
       wavelet.options.fadeout = true
     }
-    // Time to remove
+
     if (seconds >= lifetime) {
+      // Time to remove
       console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.id + ' – removing')
       wavelets.value.delete(wavelet.event.tag)
     }
   })
-  setTimeout(clearOld, 1000)
+  setTimeout(clearOld, 100)
 }
 
 const debugMode = ref(false)
