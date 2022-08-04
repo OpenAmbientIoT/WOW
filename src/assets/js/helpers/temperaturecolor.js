@@ -1,6 +1,4 @@
-export function hueColor(temperature) {
-    const minCelsius = 20
-    const maxCelsius = 30
+export function hueColor(temperature, minCelsius, maxCelsius) {
 
     // HSL wheel counterclockwise from 0
     // to go clockwise, make maxHsl and minHsl negative
@@ -14,10 +12,10 @@ export function hueColor(temperature) {
     return (360 - ((degCnt * hslsDeg) - (maxHsl - 360)))
 }
 
-export function rgbColor(temperature) {
+export function rgbColor(temperature, minCelsius, maxCelsius) {
 
 
-    const h = hueColor(temperature)
+    const h = hueColor(temperature, minCelsius, maxCelsius)
     let s = 100
     let l = 50
     //285 - 305 / Make purple darker correction

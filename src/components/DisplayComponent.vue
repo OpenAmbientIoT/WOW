@@ -10,7 +10,7 @@
     <!-- Grid mode enabled -->
     <template v-if="gridMode">
       <template v-for="[key, map] in id_map" :key="key">
-        <GridWaveletComponent :size="waveletSize" :map="map" />
+        <GridWaveletComponent :size="waveletSize" :map="map"/>
       </template>
 
       <!-- Coordinates tooltip -->
@@ -71,9 +71,18 @@
         </div>
         <hr>
 
+        <!--Play sound-->
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" v-model="isSoundOn" id="sound-on-checkbox">
+          <label class="form-check-label" for="sound-on-checkbox" style="color: white">
+            Play sound
+          </label>
+        </div>
+        <hr>
+
         <!-- Wavelet size -->
         <div>
-          <span class="text-white-50 me-3">Wavelet size</span>
+          <div class="text-white-50 me-3 mb-2">Wavelet size</div>
           <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
                  style="max-width: 80px" v-model="waveletSize">
           <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 32">32</button>
@@ -84,6 +93,19 @@
           </button>
           <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 256">256
           </button>
+        </div>
+        <hr>
+
+        <!-- Min Max Temp settings -->
+        <div class="row">
+          <div class="col">
+            <div class="text-white-50 me-3 mb-2">Min t</div>
+            <input class="form-control form-control-sm mb-2" type="number" placeholder="Min t" v-model="minCelsius">
+          </div>
+          <div class="col">
+            <div class="text-white-50 me-3 mb-2">Max t</div>
+            <input class="form-control form-control-sm mb-2" type="number" placeholder="Max t" v-model="maxCelsius">
+          </div>
         </div>
         <hr>
 
@@ -153,8 +175,10 @@ import WaveletComponent from "@/components/WaveletComponent"
 import GridWaveletComponent from "@/components/GridWaveletComponent"
 import EventsBuilder from "@/assets/js/classes/EventsBuilder";
 
+const minCelsius = ref(20)
+const maxCelsius = ref(30)
 
-function render(message) {
+function render(message, minCelsius, maxCelsius) {
   if (gridMode.value === true) {
     return false
   }
@@ -166,7 +190,7 @@ function render(message) {
       const wavelet = new WaveletElement();
 
       wavelet.event = event
-      const color = rgbColor(wavelet.event.value)
+      const color = rgbColor(wavelet.event.value, minCelsius, maxCelsius)
       wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
       wavelet.size = waveletSize.value
       wavelet.colored = isColorWavelets.value
@@ -244,7 +268,7 @@ function generateMessage() {
   const tag = '(01)00850027865010(21)00oeT' + (Math.floor(Math.random() * (max - min) + min)).toString()
   const value = (Math.random() * (max_t - min_t) + min_t).toFixed(4)
   // Get random event type from the list
-  const eventsType = eventsTypes[Math.floor(Math.random()*eventsTypes.length)];
+  const eventsType = eventsTypes[Math.floor(Math.random() * eventsTypes.length)];
   let message = 'events,tagId=' + tag + ',eventName=' + eventsType.name + ',eventValue=' + value + ',timestamp=' + Date.now()
   return message
 }
@@ -289,6 +313,7 @@ function clearOld() {
 
 const debugMode = ref(false)
 const isColorWavelets = ref(false)
+const isSoundOn = ref(false)
 const waveletSize = ref(128)
 
 const mouse_x = ref(0)
