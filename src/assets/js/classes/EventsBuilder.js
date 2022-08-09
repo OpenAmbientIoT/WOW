@@ -32,7 +32,7 @@ export default class EventsBuilder {
                         event.name = msg.replace('eventName=', '')
                     }
                     if (msg.includes('eventValue')) {
-                        event.value = Number.parseFloat(msg.replace('eventValue=', '')).toFixed(2)
+                        event.value = Number.parseFloat(msg.replace('eventValue=', '')).toFixed(1)
                         event.raw = msg.replace('eventValue=', '')
                     }
                     if (msg.includes('timestamp')) {
