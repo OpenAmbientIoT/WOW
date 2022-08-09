@@ -4,11 +4,15 @@
     <div :class="'shine' + (wavelet.options.fadein ? ' shine_fadein' : '' ) + (wavelet.options.fadeout ? ' shine_fadeout' : '' )" :style="('left:' + (wavelet.x - wavelet.size*1/2) + 'px; top:' + (wavelet.y - wavelet.size*1/2) + 'px;')
            + ('width: ' + wavelet.size*1 + 'px;' + 'height: ' + wavelet.size*1 + 'px;') + ('background-color:' + wavelet.color + ';') +
            ('-webkit-filter: blur(' + wavelet.size/5 + 'px)')"></div>
+
     <div :class="'wavelet' + (wavelet.options.fadein ? ' wavelet_fadein' : '' ) + (wavelet.options.fadeout ? ' wavelet_fadeout' : '' )"
          :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
            + ('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;')">
           <!-- + ('background-image: url(static/wavelet-anim-last-ring.svg?v='+generate()+');') -->
-        <span :class="'wavelet__value'"
+      <video poster="" preload="auto" loop="loop" autoplay="">
+        <source type="video/webm" src="https://a0.muscache.com/airbnb/static/Seoul-P1-4.mp4"></source>
+      </video>
+      <span :class="'wavelet__value'"
               :style="`font-size: ${wavelet.size/10 < 6 ? 6 : wavelet.size/10}px;`">{{
             wavelet.event.value ? wavelet.event.value : '-'
           }}°</span>
@@ -32,8 +36,7 @@
 import {defineProps} from "vue"
 import WaveletElement from "@/assets/js/classes/WaveletElement"
 import {TEMP_C} from "@/assets/js/classes/events/EventsConfig"
-// eslint-disable-next-line
-import {generate} from "@/assets/js/helpers/id";
+
 // eslint-disable-next-line
 const props = defineProps({
   wavelet: WaveletElement,

@@ -1,5 +1,6 @@
 export const SVG = 'SVG'
 export const GIF = 'GIF'
+export const VIDEO = 'VIDEO'
 export const WEBGL = 'WEBGL'
 export const renderingConfig = {
     types: [
@@ -11,6 +12,11 @@ export const renderingConfig = {
         {
             name: GIF,
             description: 'recorded, non-transp, high perf',
+            enabled: false,
+        },
+        {
+            name: VIDEO,
+            description: 'recorded, transparent, higher perf',
             enabled: false,
         },
         //{

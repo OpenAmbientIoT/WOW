@@ -1,9 +1,6 @@
 <template>
   <!-- Temperature -->
   <template v-if="wavelet.event.name == TEMP_C">
-    <div :class="'shine' + (wavelet.options.fadein ? ' shine_fadein' : '' ) + (wavelet.options.fadeout ? ' shine_fadeout' : '' )" :style="('left:' + (wavelet.x - wavelet.size*1/2) + 'px; top:' + (wavelet.y - wavelet.size*1/2) + 'px;')
-           + ('width: ' + wavelet.size*1 + 'px;' + 'height: ' + wavelet.size*1 + 'px;') + ('background-color:' + wavelet.color + ';') +
-           ('-webkit-filter: blur(' + wavelet.size/5 + 'px)')"></div>
     <div :class="'wavelet' + (wavelet.options.fadein ? ' wavelet_fadein' : '' ) + (wavelet.options.fadeout ? ' wavelet_fadeout' : '' )"
          :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
            + ('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;')">
@@ -41,11 +38,8 @@ const props = defineProps({
 </script>
 
 <style scoped lang="sass">
-
-
-
 .wavelet
-  background-image: url(@/assets/img/wavelet-anim-continous-thick.svg) //currently using the file from the static folder for recreation wavelets with a pseudo different backgrounds (?v=xxxx)
+  background-image: url(@/assets/img/wavelet-quality.gif) //currently using the file from the static folder for recreation wavelets with a pseudo different backgrounds (?v=xxxx)
   background-size: contain
   background-position: center
   position: absolute
@@ -78,17 +72,4 @@ const props = defineProps({
   left: 0
   border-radius: 100%
   mix-blend-mode: multiply
-
-.shine
-  background-size: contain
-  background-position: center
-  position: absolute
-  background-color: white
-  border-radius: 100%
-  opacity: 0
-  transition: opacity 1s
-  &_fadein
-    opacity: 1
-  &_fadeout
-    opacity: 0
 </style>

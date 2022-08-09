@@ -3,7 +3,9 @@
        :style="(gridMode && crosshairCursor ? 'cursor: crosshair;' : '') + (gridMode ? 'box-shadow: inset 0 0 0 2px wheat;' : '')">
     <!-- Wavelets to display -->
     <template v-for="[key, wavelet] in wavelets" :key="key">
-      <WaveletComponent :wavelet="wavelet"/>
+      <WaveletComponent v-if="selectedRenderingType == SVG" :wavelet="wavelet"/>
+      <GifWaveletComponent v-if="selectedRenderingType == GIF" :wavelet="wavelet"/>
+      <VideoWaveletComponent v-if="selectedRenderingType == VIDEO" :wavelet="wavelet"/>
     </template>
 
 
@@ -75,7 +77,7 @@
         <div class="form-check form-switch mb-3">
           <input class="form-check-input" type="checkbox" v-model="isSoundOn" id="sound-on-checkbox">
           <label class="form-check-label" for="sound-on-checkbox" style="color: white">
-            Play sound
+            Sound
           </label>
         </div>
         <hr>
@@ -109,12 +111,24 @@
         </div>
         <hr>
 
+        <!-- Rendering type -->
+        <div>
+          <span class="text-white-50 me-1">Rendering type</span>
+          <div class="form-check form-switch mb-1" v-for="renderingType in renderingTypes" :key="renderingType.name">
+            <input class="form-check-input" type="checkbox" v-model="renderingType.enabled" v-on:change="renderingTypeChanged" :value="renderingType.name" :id="`rendering-type-checkbox-${renderingType.name}`">
+            <label class="form-check-label" :for="`rendering-type-checkbox-${renderingType.name}`" style="color: white">
+              {{ renderingType.name }} <sup><span class="small text-white-50">{{ renderingType.description }}</span></sup>
+            </label>
+          </div>
+        </div>
+        <hr>
+
         <!-- Handle events -->
         <div>
           <span class="text-white-50 me-1">Handle events</span>
           <div class="form-check form-switch mb-1" v-for="eventType in eventsTypes" :key="eventType.name">
-            <input class="form-check-input" type="checkbox" v-model="eventType.enabled" id="color-wavelets-checkbox">
-            <label class="form-check-label" for="color-wavelets-checkbox" style="color: white">
+            <input class="form-check-input" type="checkbox" v-model="eventType.enabled" :id="`handle-wavelets-checkbox-${eventType.name}`">
+            <label class="form-check-label" :for="`handle-wavelets-checkbox-${eventType.name}`" style="color: white">
               {{ eventType.name }}
             </label>
           </div>
@@ -148,6 +162,7 @@ import {ref, onMounted, reactive} from 'vue'
 const wavelets = ref(new Map())
 const id_map = ref(new Map())
 const gridMode = ref(false)
+const consoleEvents = ref(false)
 
 import mqttclient from "@/assets/js/mqttclient";
 import MessageParser from "@/assets/js/classes/MessageParser";
@@ -166,19 +181,35 @@ function disconnect() {
 
 
 import {eventsConfig} from "@/assets/js/classes/events/EventsConfig";
+import {renderingConfig, SVG, GIF, VIDEO} from "@/assets/js/classes/RenderingConfig";
 
 const eventsTypes = reactive(eventsConfig.eventsTypes)
+const renderingTypes = reactive(renderingConfig.types)
 
 import {rgbColor} from "@/assets/js/helpers/temperaturecolor"
 import {humanReadableTime} from "@/assets/js/helpers/time"
 import WaveletComponent from "@/components/WaveletComponent"
 import GridWaveletComponent from "@/components/GridWaveletComponent"
+import GifWaveletComponent from "@/components/GifWaveletComponent"
 import EventsBuilder from "@/assets/js/classes/EventsBuilder";
+import VideoWaveletComponent from "@/components/VideoWaveletComponent";
+
+// Rendering
+const selectedRenderingType = ref(SVG)
+function renderingTypeChanged(e) {
+  const selected = e.target.value
+  renderingTypes.forEach((type) => {
+    if (type.name != selected) {
+      type.enabled = false
+    }
+  })
+  selectedRenderingType.value = selected
+}
 
 const minCelsius = ref(20)
 const maxCelsius = ref(30)
 
-function render(message, minCelsius, maxCelsius) {
+function render(message) {
   if (gridMode.value === true) {
     return false
   }
@@ -190,25 +221,29 @@ function render(message, minCelsius, maxCelsius) {
       const wavelet = new WaveletElement();
 
       wavelet.event = event
-      const color = rgbColor(wavelet.event.value, minCelsius, maxCelsius)
+      const color = rgbColor(wavelet.event.value, minCelsius.value, maxCelsius.value)
       wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
       wavelet.size = waveletSize.value
       wavelet.colored = isColorWavelets.value
       wavelet.debug = debugMode.value
 
       // Get element coordinates
-      console.log(wavelet.event)
+      if (consoleEvents.value) console.log(wavelet.event)
       const timestamp = wavelet.event.timestamp
       const coordinates = id_map.value.get(wavelet.event.tag)
       if (coordinates) {
-        console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is in map. Render.')
+        if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is in map. Render.')
         wavelet.inject(coordinates)
         wavelets.value.set(wavelet.event.tag, wavelet)
+        if (isSoundOn.value) {
+          const sound = new Audio('static/sound/bell-high.mp3')
+          sound.play()
+        }
       } else {
-        console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is not in map!')
+        if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is not in map!')
       }
     } else {
-      console.log('Skip message ' + message)
+      if (consoleEvents.value) console.log('Skip message ' + message)
     }
   }
 }
@@ -292,19 +327,19 @@ function clearOld() {
 
     if (!wavelet.options.fadein) {
       // Fadein
-      console.log('Time to fadein for #' + wavelet.id)
+      if (consoleEvents.value) console.log('Time to fadein for #' + wavelet.id)
       wavelet.options.fadein = true
     }
 
     if (seconds >= lifetime - 1 && !wavelet.options.fadeout) {
       // Fadeout
-      console.log('Time to fadeout for #' + wavelet.id)
+      if (consoleEvents.value) console.log('Time to fadeout for #' + wavelet.id)
       wavelet.options.fadeout = true
     }
 
     if (seconds >= lifetime) {
       // Time to remove
-      console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.id + ' – removing')
+      if (consoleEvents.value) console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.id + ' – removing')
       wavelets.value.delete(wavelet.event.tag)
     }
   })
