@@ -11,18 +11,18 @@ export const renderingConfig = {
         },
         {
             name: GIF,
-            description: 'recorded, non-transp, high perf',
-            enabled: false,
-        },
-        {
-            name: VIDEO,
-            description: 'recorded, transparent, higher perf',
+            description: 'rec, non-transp, high perf',
             enabled: false,
         },
         //{
-        //    name: WEBGL,
-        //    description: 'realtime, transparent, highest perf',
+        //    name: VIDEO,
+        //    description: 'rec, transp, very low perf',
         //    enabled: false,
         //},
+        {
+            name: WEBGL,
+            description: 'todo, realtime, transp, highest perf',
+            enabled: false,
+        },
     ],
 }

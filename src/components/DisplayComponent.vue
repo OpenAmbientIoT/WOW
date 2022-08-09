@@ -2,10 +2,14 @@
   <div class="display" v-on:mousemove="updateCoordinates"
        :style="(gridMode && crosshairCursor ? 'cursor: crosshair;' : '') + (gridMode ? 'box-shadow: inset 0 0 0 2px wheat;' : '')">
     <!-- Wavelets to display -->
-    <template v-for="[key, wavelet] in wavelets" :key="key">
+    <!-- Canvas/webgl -->
+    <CanvasComponent v-if="selectedRenderingType == WEBGL" :wavelets="wavelets" :id_map="id_map" />
+
+    <!-- SVG, GIF, VIDEO -->
+    <template v-else v-for="[key, wavelet] in wavelets" :key="key">
       <WaveletComponent v-if="selectedRenderingType == SVG" :wavelet="wavelet"/>
       <GifWaveletComponent v-if="selectedRenderingType == GIF" :wavelet="wavelet"/>
-      <VideoWaveletComponent v-if="selectedRenderingType == VIDEO" :wavelet="wavelet"/>
+      <!-- <VideoWaveletComponent v-if="selectedRenderingType == VIDEO" :wavelet="wavelet"/>-->
     </template>
 
 
@@ -115,9 +119,13 @@
         <div>
           <span class="text-white-50 me-1">Rendering type</span>
           <div class="form-check form-switch mb-1" v-for="renderingType in renderingTypes" :key="renderingType.name">
-            <input class="form-check-input" type="checkbox" v-model="renderingType.enabled" v-on:change="renderingTypeChanged" :value="renderingType.name" :id="`rendering-type-checkbox-${renderingType.name}`">
+            <input class="form-check-input" type="checkbox" v-model="renderingType.enabled"
+                   v-on:change="renderingTypeChanged" :value="renderingType.name"
+                   :id="`rendering-type-checkbox-${renderingType.name}`">
             <label class="form-check-label" :for="`rendering-type-checkbox-${renderingType.name}`" style="color: white">
-              {{ renderingType.name }} <sup><span class="small text-white-50">{{ renderingType.description }}</span></sup>
+              {{ renderingType.name }} <sup><span class="small text-white-50">{{
+                renderingType.description
+              }}</span></sup>
             </label>
           </div>
         </div>
@@ -127,7 +135,8 @@
         <div>
           <span class="text-white-50 me-1">Handle events</span>
           <div class="form-check form-switch mb-1" v-for="eventType in eventsTypes" :key="eventType.name">
-            <input class="form-check-input" type="checkbox" v-model="eventType.enabled" :id="`handle-wavelets-checkbox-${eventType.name}`">
+            <input class="form-check-input" type="checkbox" v-model="eventType.enabled"
+                   :id="`handle-wavelets-checkbox-${eventType.name}`">
             <label class="form-check-label" :for="`handle-wavelets-checkbox-${eventType.name}`" style="color: white">
               {{ eventType.name }}
             </label>
@@ -181,7 +190,7 @@ function disconnect() {
 
 
 import {eventsConfig} from "@/assets/js/classes/events/EventsConfig";
-import {renderingConfig, SVG, GIF, VIDEO} from "@/assets/js/classes/RenderingConfig";
+import {renderingConfig, SVG, GIF, WEBGL} from "@/assets/js/classes/RenderingConfig";
 
 const eventsTypes = reactive(eventsConfig.eventsTypes)
 const renderingTypes = reactive(renderingConfig.types)
@@ -191,11 +200,12 @@ import {humanReadableTime} from "@/assets/js/helpers/time"
 import WaveletComponent from "@/components/WaveletComponent"
 import GridWaveletComponent from "@/components/GridWaveletComponent"
 import GifWaveletComponent from "@/components/GifWaveletComponent"
-import EventsBuilder from "@/assets/js/classes/EventsBuilder";
-import VideoWaveletComponent from "@/components/VideoWaveletComponent";
+import CanvasComponent from "@/components/CanvasComponent"
+import EventsBuilder from "@/assets/js/classes/EventsBuilder"
 
 // Rendering
 const selectedRenderingType = ref(SVG)
+
 function renderingTypeChanged(e) {
   const selected = e.target.value
   renderingTypes.forEach((type) => {
@@ -208,6 +218,8 @@ function renderingTypeChanged(e) {
 
 const minCelsius = ref(20)
 const maxCelsius = ref(30)
+
+
 
 function render(message) {
   if (gridMode.value === true) {
@@ -235,10 +247,15 @@ function render(message) {
         if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is in map. Render.')
         wavelet.inject(coordinates)
         wavelets.value.set(wavelet.event.tag, wavelet)
+        // Sound
         if (isSoundOn.value) {
           const sound = new Audio('static/sound/bell-high.mp3')
           sound.play()
         }
+        //// Canvas Case
+        //if (selectedRenderingType.value == WEBGL) {
+        //
+        //}
       } else {
         if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is not in map!')
       }

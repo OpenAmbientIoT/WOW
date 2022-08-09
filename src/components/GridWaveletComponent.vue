@@ -19,7 +19,7 @@ const props = defineProps({
 
 
 .wavelet
-  background-image: url(@/assets/img/wavelet-anim-continous.svg) //was bad: using the file from the static folder for recreation wavelets with a pseudo different backgrounds (?v=xxxx)
+  background-image: url(@/assets/img/wavelet-quality.gif) //was bad: using the file from the static folder for recreation wavelets with a pseudo different backgrounds (?v=xxxx)
   background-size: contain
   background-position: center
   position: absolute
