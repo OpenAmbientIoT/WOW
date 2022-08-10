@@ -50,6 +50,7 @@ const props = defineProps({
   background-position: center
   position: absolute
   transition: opacity 1s
+  transform: translate3d(0,0,0)
   opacity: 0
   &_fadein
     opacity: 1
@@ -87,6 +88,7 @@ const props = defineProps({
   border-radius: 100%
   opacity: 0
   transition: opacity 1s
+  transform: translate3d(0,0,0)
   &_fadein
     opacity: 1
   &_fadeout

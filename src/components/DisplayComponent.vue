@@ -3,13 +3,13 @@
        :style="(gridMode && crosshairCursor ? 'cursor: crosshair;' : '') + (gridMode ? 'box-shadow: inset 0 0 0 2px wheat;' : '')">
     <!-- Wavelets to display -->
     <!-- Canvas/webgl -->
-    <CanvasComponent v-if="selectedRenderingType == WEBGL" :wavelets="wavelets" :id_map="id_map" />
-
+    <div id="canvas-container"></div>
     <!-- SVG, GIF, VIDEO -->
-    <template v-else v-for="[key, wavelet] in wavelets" :key="key">
-      <WaveletComponent v-if="selectedRenderingType == SVG" :wavelet="wavelet"/>
-      <GifWaveletComponent v-if="selectedRenderingType == GIF" :wavelet="wavelet"/>
-      <!-- <VideoWaveletComponent v-if="selectedRenderingType == VIDEO" :wavelet="wavelet"/>-->
+    <template v-if="selectedRenderingType != WEBGL">
+      <template v-for="[key, wavelet] in wavelets" :key="key">
+        <WaveletComponent v-if="selectedRenderingType == SVG" :wavelet="wavelet"/>
+        <GifWaveletComponent v-if="selectedRenderingType == GIF" :wavelet="wavelet"/>
+      </template>
     </template>
 
 
@@ -179,7 +179,7 @@ import WaveletElement from "@/assets/js/classes/WaveletElement";
 
 // eslint-disable-next-line
 function connect() {
-  mqttclient.createConnection(render, renderConnection)
+  mqttclient.createConnection(process, renderConnection)
   mqttclient.doSubscribe()
 }
 
@@ -200,28 +200,15 @@ import {humanReadableTime} from "@/assets/js/helpers/time"
 import WaveletComponent from "@/components/WaveletComponent"
 import GridWaveletComponent from "@/components/GridWaveletComponent"
 import GifWaveletComponent from "@/components/GifWaveletComponent"
-import CanvasComponent from "@/components/CanvasComponent"
 import EventsBuilder from "@/assets/js/classes/EventsBuilder"
 
-// Rendering
-const selectedRenderingType = ref(SVG)
-
-function renderingTypeChanged(e) {
-  const selected = e.target.value
-  renderingTypes.forEach((type) => {
-    if (type.name != selected) {
-      type.enabled = false
-    }
-  })
-  selectedRenderingType.value = selected
-}
 
 const minCelsius = ref(20)
 const maxCelsius = ref(30)
 
 
-
-function render(message) {
+// Parse event message, create wavelet element, inject necessary data into wavelet
+function process(message) {
   if (gridMode.value === true) {
     return false
   }
@@ -252,10 +239,10 @@ function render(message) {
           const sound = new Audio('static/sound/bell-high.mp3')
           sound.play()
         }
-        //// Canvas Case
-        //if (selectedRenderingType.value == WEBGL) {
-        //
-        //}
+        // Canvas Case
+        if (selectedRenderingType.value == WEBGL) {
+          drawWavelet(wavelet)
+        }
       } else {
         if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is not in map!')
       }
@@ -280,17 +267,6 @@ function openFile(event) {
 
 const simulationMode = ref(false)
 
-onMounted(() => {
-  if (simulationMode.value === true) {
-    connectionStatus.value = 'green'
-    runSimulation()
-  } else {
-    connectionStatus.value = 'red'
-    connect()
-  }
-  clearOld()
-  id_map.value = MessageParser.coordinates()
-})
 
 function simulationSwitched() {
   if (simulationMode.value === true) {
@@ -331,7 +307,7 @@ function runSimulation() {
   }
   connectionState.value = !connectionState.value
   const message = generateMessage()
-  render(message)
+  process(message)
   setTimeout(runSimulation, Math.floor(Math.random() * 10) + 1)
 }
 
@@ -358,8 +334,16 @@ function clearOld() {
       // Time to remove
       if (consoleEvents.value) console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.id + ' – removing')
       wavelets.value.delete(wavelet.event.tag)
+
+      // Remove from canvas
+      container.children.forEach((waveletContainer) => {
+        if (wavelet.event.tag == waveletContainer.wavelet.event.tag) {
+          container.removeChild(waveletContainer)
+        }
+      })
     }
   })
+
   setTimeout(clearOld, 100)
 }
 
@@ -402,6 +386,150 @@ const uiConfiguration = reactive({
 })
 
 
+// Pixi / Canvas/ WebGL 2
+// eslint-disable-next-line
+import * as PIXI from 'pixi.js'
+
+const pixi = new PIXI.Application({
+  width: window.innerWidth,
+  height: window.innerHeight,
+  antialias: true,
+  backgroundAlpha: true,
+  //autoDensity: true,
+  //backgroundColor: '0x000000',
+})
+
+// Common rendering container
+const container = new PIXI.Container();
+container.x = 0;
+container.y = 0;
+container.width = window.innerWidth
+container.height = window.innerHeight
+container.pivot.x = 0;
+container.pivot.y = 0;
+pixi.stage.addChild(container);
+
+// eslint-disable-next-line
+//const texture = PIXI.Texture.from("static/img/logo128.png")
+
+function ticks() {
+  // Listen for animate update
+  pixi.ticker.add(() => { //delta
+
+    if (selectedRenderingType.value == WEBGL) {
+      // eslint-disable-next-line
+      container.children.forEach((waveletContainer) => {
+        //waveletContainer.alpha > .8 ? waveletContainer.alpha -= .01 : null
+        if (waveletContainer.wavelet.options.fadein) {
+          waveletContainer.alpha < 1 ? waveletContainer.alpha += .03 : null
+        }
+        if (waveletContainer.wavelet.options.fadeout) {
+          waveletContainer.alpha > 0 ? waveletContainer.alpha -= .03 : null
+        }
+        // Calculate circles
+        // eslint-disable-next-line
+        waveletContainer.children.forEach((circle) => {
+          // Fadein circle
+          if (circle.scale.x < 0.3) {
+            circle.alpha < 1 ? circle.alpha += .02 : null
+          }
+          // Fadeout circle
+          if (circle.scale.x > 0.8) {
+            circle.alpha -= .01
+          }
+          // Scale circle
+          circle.scale.x < 1 ? circle.scale.set(circle.scale.x + .025, circle.scale.y + .025) : null
+        })
+      })
+    }
+
+  });
+}
+
+/**
+ *
+ * @param wavelet WaveletElement
+ */
+function drawWavelet(wavelet) {
+  console.log('drawWavelet triggered')
+  console.log(wavelet)
+
+  // Create wavelet container
+  const waveletContainer = new PIXI.Container()
+  waveletContainer.width = waveletSize.value
+  waveletContainer.height = waveletSize.value
+  waveletContainer.x = wavelet.x
+  waveletContainer.y = wavelet.y
+  waveletContainer.pivot.x = waveletContainer.width / 2
+  waveletContainer.pivot.y = waveletContainer.height / 2
+  // Attach wavelet obj
+  waveletContainer.wavelet = wavelet
+  waveletContainer.alpha = 0
+  //waveletContainer.toGlobal(new PIXI.Point(0,0))
+
+  //const sprite = new PIXI.Sprite(texture)
+  //sprite.width = waveletSize.value
+  //sprite.height = waveletSize.value
+  //waveletContainer.addChild(sprite)
+
+  // Wavelet inner circles
+  // #1
+  let circle = new PIXI.Graphics();
+  circle.lineStyle(3, 0xffffff, 1)
+  //circle.beginFill(0xDBE5DC);
+  circle.drawCircle(0, 0, waveletSize.value * 0.1)
+  //circle.endFill()
+  //circle.maxSegments = 12
+  //circle.maxLength = 5
+  //circle.adaptive = true
+  //circle.nativeLines = true
+  circle.pivot.x = waveletContainer.width / 2
+  circle.pivot.y = waveletContainer.height / 2
+  circle.position.set(waveletContainer.width / 2, waveletContainer.height / 2)
+  //circle.toGlobal(new PIXI.Point(0,0))
+  circle.scale.set(.1, .1)
+  waveletContainer.addChild(circle)
+
+
+  // Todo Add value and shine if temperature
+
+
+  container.addChild(waveletContainer)
+}
+
+
+// Rendering type
+const selectedRenderingType = ref(SVG)
+
+function renderingTypeChanged(e) {
+  const selected = e.target.value
+  renderingTypes.forEach((type) => {
+    if (type.name != selected) {
+      type.enabled = false
+    }
+  })
+  selectedRenderingType.value = selected
+}
+
+//
+onMounted(() => {
+  // Simulation / connect
+  if (simulationMode.value === true) {
+    connectionStatus.value = 'green'
+    runSimulation()
+  } else {
+    connectionStatus.value = 'red'
+    connect()
+  }
+  // Remove expired wavelets
+  clearOld()
+  // Empty map
+  id_map.value = MessageParser.coordinates()
+  // Pixi
+  const canvas = document.getElementById('canvas-container')
+  canvas.appendChild(pixi.view)
+  ticks()
+})
 </script>
 
 <style scoped lang="sass">
@@ -454,4 +582,8 @@ body
 
 hr
   box-shadow: 0 1px 0 0 wheat
+
+#canvas-container
+  width: 100vw
+  height: 100vh
 </style>

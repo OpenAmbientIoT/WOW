@@ -16,6 +16,10 @@ export default class DisplayElement {
             value: '',
             timestamp: '',
         }
+
+        this.rendering = {
+
+        }
     }
 
     inject(data) {
