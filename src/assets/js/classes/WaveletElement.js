@@ -1,5 +1,5 @@
-import DisplayElement from "@/assets/js/classes/DisplayElement";
-export default class WaveletElement extends DisplayElement {
+import RenderingElement from "@/assets/js/classes/RenderingElement";
+export default class WaveletElement extends RenderingElement {
     constructor() {
         super();
 

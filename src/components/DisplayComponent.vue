@@ -89,7 +89,7 @@
 
         <!-- Wavelet size -->
         <div>
-          <div class="text-white-50 me-3 mb-2">Default wavelet size</div>
+          <div class="text-white-50 me-3 mb-2">Disk size</div>
           <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
                  style="max-width: 80px" v-model="waveletSize">
           <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 32">32</button>
@@ -196,7 +196,7 @@ import {ref, onMounted, reactive} from 'vue'
 const wavelets = ref(new Map())
 const id_map = ref(new Map())
 const rssi = ref(new Map())
-const rssiScaleFactor = ref(5)
+const rssiScaleFactor = ref(1)
 const temperatureDiscTimeout = ref(15)
 
 const gridMode = ref(false)
@@ -241,7 +241,7 @@ function process(message) {
     return false
   }
 
-  if (consoleEvents.value) console.log(message)
+  console.log(message)
 
   if (typeof message == 'string') {
     // Get event data
@@ -258,12 +258,27 @@ function process(message) {
           if (consoleEvents.value) console.log(event)
           const csvData = id_map.value.get(event.tag)
           if (csvData) {
-
             // Create new wavelet element
             const wavelet = new WaveletElement();
             wavelet.event = event
+            // When non TEMP_C event check if we have already TEMP_C wavelet
+            if (event.name != TEMP_C && wavelets.value.has(event.tag)) {
+              const existing = wavelets.value.get(event.tag)
+              if (existing.event.name == TEMP_C) {
+                wavelet.predecessor = existing
+              } else if (existing.predecessor && existing.predecessor.event.name == TEMP_C) {
+                wavelet.predecessor = existing.predecessor
+              }
+              // Update current event timestamp to increase living time to predecessor
+              // !!! not necessary since we are using 'wavelet.created' value
+              if (wavelet.predecessor && (wavelet.predecessor.event.timestamp > wavelet.event.timestamp)) {
+                wavelet.event.timestamp = wavelet.predecessor.event.timestamp
+              }
+            }
+
             const color = rgbColor(wavelet.event.value, minCelsius.value, maxCelsius.value)
             wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
+
             // Get size
             let size = waveletSize.value
             // Try RSSI
@@ -275,13 +290,15 @@ function process(message) {
             }
             wavelet.size = size
 
+            wavelet.basicSize = waveletSize.value
+
             wavelet.colored = isColorWavelets.value
             wavelet.debug = debugMode.value
             wavelet.inject(csvData)
             wavelets.value.set(wavelet.event.tag, wavelet)
 
             // Console
-            if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is in map. Render.')
+            console.log('Tag ' + wavelet.event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is in map. Render.')
 
             // Sound
             if (isSoundOn.value) {
@@ -295,10 +312,8 @@ function process(message) {
             }
           } else {
             // Console
-            if (consoleEvents.value) console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is not in map!')
+            console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is not in map!')
           }
-
-
       }
 
 
@@ -375,7 +390,7 @@ function clearOld() {
     const ringsLifetime = lifetime
 
     // Extend temperature wavelets lifetime (based on specified color disc time)
-    if (wavelet.event.name == TEMP_C) {
+    if (wavelet.event.name == TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name == TEMP_C)) {
       const temperatureWaveletLifetime = temperatureDiscTimeout.value
       lifetime = lifetime < temperatureWaveletLifetime ? (lifetime + temperatureWaveletLifetime - lifetime) : (lifetime)
     }
@@ -391,7 +406,7 @@ function clearOld() {
 
 
     // Fadeout wavelet rings for temperature events earlier than fadeout whole wavelet
-    if (wavelet.event.name == TEMP_C) {
+    if (wavelet.event.name == TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name == TEMP_C)) {
       if (seconds >= ringsLifetime - 1 && !wavelet.options.ringsFadeout) {
         // Fadeout rings
         if (consoleEvents.value) console.log('Time to fadeout rings for #' + wavelet.id)
