@@ -4,7 +4,10 @@
     <div :class="'shine' + (wavelet.options.fadein ? ' shine_fadein' : '' ) + (wavelet.options.fadeout ? ' shine_fadeout' : '' )" :style="('left:' + (wavelet.x - wavelet.size*1/2) + 'px; top:' + (wavelet.y - wavelet.size*1/2) + 'px;')
            + ('width: ' + wavelet.size*1 + 'px;' + 'height: ' + wavelet.size*1 + 'px;') + ('background-color:' + wavelet.color + ';') +
            ('-webkit-filter: blur(' + wavelet.size/5 + 'px)')"></div>
-    <div :class="'wavelet' + (wavelet.options.fadein ? ' wavelet_fadein' : '' ) + (wavelet.options.fadeout ? ' wavelet_fadeout' : '' )"
+    <div :class="'wavelet' + (wavelet.options.fadein ? ' wavelet_fadein' : '' )
+    + (wavelet.options.fadeout ? ' wavelet_fadeout' : '' )
+    + (wavelet.options.ringsFadeout ? ' wavelet_fadeout' : '' )
+"
          :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
            + ('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;')">
           <!-- + ('background-image: url(static/wavelet-anim-last-ring.svg?v='+generate()+');') -->

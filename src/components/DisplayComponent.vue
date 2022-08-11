@@ -29,6 +29,7 @@
 
     <div class="ui-wrapper mb-3" :style="uiConfiguration.positions[uiPosition].style">
       <div class="ui-container-toggle" :style="(id_map.size == 0 ? 'display: block !important; ' : '')">
+
         <!-- Connection status -->
         <div class="connection-status mb-3" :class="connectionStatus"
              :style="'background-color:' + connectionStatus + '; opacity: ' + (connectionState ? 1 : .4) + ';'"></div>
@@ -88,7 +89,7 @@
 
         <!-- Wavelet size -->
         <div>
-          <div class="text-white-50 me-3 mb-2">Wavelet size</div>
+          <div class="text-white-50 me-3 mb-2">Default wavelet size</div>
           <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
                  style="max-width: 80px" v-model="waveletSize">
           <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 32">32</button>
@@ -99,6 +100,30 @@
           </button>
           <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 256">256
           </button>
+        </div>
+        <hr>
+
+        <!-- Rssi scale factor -->
+        <div>
+          <div class="text-white-50 me-3 mb-2">RSSI scale factor</div>
+          <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
+                 style="max-width: 80px" v-model="rssiScaleFactor">
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="rssiScaleFactor = 5">5</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="rssiScaleFactor = 10">10</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="rssiScaleFactor = 15">15
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="rssiScaleFactor = 20">20
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="rssiScaleFactor = 25">25
+          </button>
+        </div>
+        <hr>
+
+        <!-- Temperature disc timeout -->
+        <div>
+          <div class="text-white-50 me-3 mb-2">Temperature disc timeout</div>
+          <input class="form-control form-control-sm mb-2" type="number" placeholder="Amount in seconds"
+                 style="max-width: 80px" v-model="temperatureDiscTimeout">
         </div>
         <hr>
 
@@ -170,11 +195,14 @@ import {ref, onMounted, reactive} from 'vue'
 
 const wavelets = ref(new Map())
 const id_map = ref(new Map())
+const rssi = ref(new Map())
+const rssiScaleFactor = ref(5)
+const temperatureDiscTimeout = ref(15)
+
 const gridMode = ref(false)
 const consoleEvents = ref(false)
 
 import mqttclient from "@/assets/js/mqttclient";
-import MessageParser from "@/assets/js/classes/MessageParser";
 import WaveletElement from "@/assets/js/classes/WaveletElement";
 
 // eslint-disable-next-line
@@ -189,7 +217,7 @@ function disconnect() {
 }
 
 
-import {eventsConfig} from "@/assets/js/classes/events/EventsConfig";
+import {eventsConfig, RSSI, TEMP_C} from "@/assets/js/classes/events/EventsConfig";
 import {renderingConfig, SVG, GIF, WEBGL} from "@/assets/js/classes/RenderingConfig";
 
 const eventsTypes = reactive(eventsConfig.eventsTypes)
@@ -212,51 +240,93 @@ function process(message) {
   if (gridMode.value === true) {
     return false
   }
+
+  if (consoleEvents.value) console.log(message)
+
   if (typeof message == 'string') {
     // Get event data
     const event = EventsBuilder.parse(message, eventsTypes)
     if (event) {
-      // Create new wavelet element
-      const wavelet = new WaveletElement();
 
-      wavelet.event = event
-      const color = rgbColor(wavelet.event.value, minCelsius.value, maxCelsius.value)
-      wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
-      wavelet.size = waveletSize.value
-      wavelet.colored = isColorWavelets.value
-      wavelet.debug = debugMode.value
-
-      // Get element coordinates
-      if (consoleEvents.value) console.log(wavelet.event)
-      const timestamp = wavelet.event.timestamp
-      const coordinates = id_map.value.get(wavelet.event.tag)
-      if (coordinates) {
-        if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is in map. Render.')
-        wavelet.inject(coordinates)
-        wavelets.value.set(wavelet.event.tag, wavelet)
-        // Sound
-        if (isSoundOn.value) {
-          const sound = new Audio('static/sound/bell-high.mp3')
-          sound.play()
-        }
-        // Canvas Case
-        if (selectedRenderingType.value == WEBGL) {
-          drawWavelet(wavelet)
-        }
+      // Do not render RSSI (don't add to wavelets list)
+      if (event.name == RSSI) {
+        rssi.value.set(event.tag, event.raw)
+      // Render all OTHER events (add to wavelets list)
       } else {
-        if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + timestamp + ' / ' + humanReadableTime(timestamp) + ') is not in map!')
+
+        // Render a non-TEMP_C event only if TEMP_C wavelet not rendering this moment
+        let renderEvent = true
+        // Check if tag has already TEMP_C event in rendering
+        if (event.name != TEMP_C && wavelets.value.has(event.tag)) {
+          // Check existing event name
+          const existing_wavelet = wavelets.value.get(event.tag)
+          if (existing_wavelet.event.name == TEMP_C) {
+            // Do not render/overwrite existing TEMP_C event
+            renderEvent = false
+          }
+        }
+
+        if (renderEvent) {
+          // Get element csvData (csv data)
+          if (consoleEvents.value) console.log(event)
+          const csvData = id_map.value.get(event.tag)
+          if (csvData) {
+
+            // Create new wavelet element
+            const wavelet = new WaveletElement();
+            wavelet.event = event
+            const color = rgbColor(wavelet.event.value, minCelsius.value, maxCelsius.value)
+            wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
+            // Get size
+            let size = waveletSize.value
+            // Try RSSI
+            if (rssi.value.has(event.tag)) {
+              size = toSize(rssi.value.get(event.tag), rssiScaleFactor.value)
+              // Try CSV data
+            } else if (csvData.size) {
+              size = csvData.size
+            }
+            wavelet.size = size
+
+            wavelet.colored = isColorWavelets.value
+            wavelet.debug = debugMode.value
+            wavelet.inject(csvData)
+            wavelets.value.set(wavelet.event.tag, wavelet)
+
+            // Console
+            if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is in map. Render.')
+
+            // Sound
+            if (isSoundOn.value) {
+              const sound = new Audio('static/sound/bell-high.mp3')
+              sound.play()
+            }
+
+            // Canvas Case
+            if (selectedRenderingType.value == WEBGL) {
+              drawWavelet(wavelet)
+            }
+          } else {
+            // Console
+            if (consoleEvents.value) console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is not in map!')
+          }
+        }
+
       }
+
+
     } else {
       if (consoleEvents.value) console.log('Skip message ' + message)
     }
   }
 }
 
+import {parse} from "@/assets/js/helpers/csv"
 function openFile(event) {
   let input = event.target;
   const reader = new FileReader();
   reader.onload = function () {
-    id_map.value = MessageParser.coordinates(reader.result)
+    id_map.value = parse(reader.result)
     console.log('Uploaded CSV:');
     console.log(reader.result.substring(0, 200));
   };
@@ -312,9 +382,17 @@ function runSimulation() {
 }
 
 function clearOld() {
-  const lifetime = 10 // seconds
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
+    let lifetime = 10 // seconds
+    const ringsLifetime = lifetime
+
+    // Extend temperature wavelets lifetime (based on specified color disc time)
+    if (wavelet.event.name == TEMP_C) {
+      const temperatureWaveletLifetime = temperatureDiscTimeout.value
+      lifetime = lifetime < temperatureWaveletLifetime ? (lifetime + temperatureWaveletLifetime - lifetime) : (lifetime)
+    }
+
     const milliseconds = now - wavelet.created
     const seconds = Math.floor(milliseconds / 1000)
 
@@ -322,6 +400,16 @@ function clearOld() {
       // Fadein
       if (consoleEvents.value) console.log('Time to fadein for #' + wavelet.id)
       wavelet.options.fadein = true
+    }
+
+
+    // Fadeout wavelet rings for temperature events earlier than fadeout whole wavelet
+    if (wavelet.event.name == TEMP_C) {
+      if (seconds >= ringsLifetime - 1 && !wavelet.options.ringsFadeout) {
+        // Fadeout rings
+        if (consoleEvents.value) console.log('Time to fadeout rings for #' + wavelet.id)
+        wavelet.options.ringsFadeout = true
+      }
     }
 
     if (seconds >= lifetime - 1 && !wavelet.options.fadeout) {
@@ -335,7 +423,7 @@ function clearOld() {
       if (consoleEvents.value) console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.id + ' – removing')
       wavelets.value.delete(wavelet.event.tag)
 
-      // Remove from canvas
+      // Remove from Canvas
       container.children.forEach((waveletContainer) => {
         if (wavelet.event.tag == waveletContainer.wavelet.event.tag) {
           container.removeChild(waveletContainer)
@@ -389,6 +477,7 @@ const uiConfiguration = reactive({
 // Pixi / Canvas/ WebGL 2
 // eslint-disable-next-line
 import * as PIXI from 'pixi.js'
+import {toSize} from "@/assets/js/helpers/rssi";
 
 const pixi = new PIXI.Application({
   width: window.innerWidth,
@@ -524,8 +613,8 @@ onMounted(() => {
   // Remove expired wavelets
   clearOld()
   // Empty map
-  id_map.value = MessageParser.coordinates()
-  // Pixi
+  id_map.value = new Map()
+  // Pixi / canvas / WebGL
   const canvas = document.getElementById('canvas-container')
   canvas.appendChild(pixi.view)
   ticks()
@@ -548,18 +637,25 @@ body
 .ui-wrapper
   position: absolute
   width: 260px
-  min-height: 600px
+  min-height: 100vh
   opacity: 1
   z-index: 9999
-
-
+  overflow-x: hidden
+  overflow-y: auto
+  scrollbar-width: none
   & > div
     display: none
-    background-color: rgba(0, 0, 0, .6)
+    background-color: rgba(33, 33, 33, .6)
     padding: 10px
-
   &:hover > div
     display: block
+  &::-webkit-scrollbar
+    display: none
+
+
+
+.ui-container-toggle
+  position: absolute
 
 .connection-status
   border-radius: 5px

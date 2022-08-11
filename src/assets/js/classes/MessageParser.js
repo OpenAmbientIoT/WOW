@@ -39,24 +39,4 @@ export default class MessageParser {
         return null
     }
 
-    static coordinates(list) {
-        const coordinates = new Map()
-
-        if (!list) {
-            return coordinates
-        }
-
-        const rows = list.replace(/\r\n/g, '\n').split('\n')
-
-        rows.forEach((line) => {
-            const splited = line.split(',')
-            if (splited[0] != 'ID') { // Skip first line 'ID,1080X,1080Y,,,,,,,,,'
-                const tag = splited[0].replace('tagId=', '')
-                const x = splited[1]
-                const y = splited[2]
-                coordinates.set(tag, {x: x, y: y})
-            }
-        })
-        return coordinates;
-    }
 }

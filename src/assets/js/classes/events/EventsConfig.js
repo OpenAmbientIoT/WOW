@@ -3,6 +3,7 @@ export const DBUG = 'DBUG'
 export const ACTV = 'ACTV'
 export const LOCH = 'LOCH'
 export const GEOLOC = 'GEOLOC'
+export const RSSI = 'RSSI'
 export const eventsConfig = {
     eventsTypes: [
         {
@@ -23,6 +24,10 @@ export const eventsConfig = {
         },
         {
             name: GEOLOC,
+            enabled: true,
+        },
+        {
+            name: RSSI,
             enabled: true,
         },
     ],

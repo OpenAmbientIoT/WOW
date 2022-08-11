@@ -8,6 +8,7 @@ export default class WaveletElement extends DisplayElement {
         this.options = {
             fadein: false,
             fadeout: false,
+            ringsFadeout: false,
         }
     }
 }
