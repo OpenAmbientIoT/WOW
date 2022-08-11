@@ -254,19 +254,6 @@ function process(message) {
       // Render all OTHER events (add to wavelets list)
       } else {
 
-        // Render a non-TEMP_C event only if TEMP_C wavelet not rendering this moment
-        let renderEvent = true
-        // Check if tag has already TEMP_C event in rendering
-        if (event.name != TEMP_C && wavelets.value.has(event.tag)) {
-          // Check existing event name
-          const existing_wavelet = wavelets.value.get(event.tag)
-          if (existing_wavelet.event.name == TEMP_C) {
-            // Do not render/overwrite existing TEMP_C event
-            renderEvent = false
-          }
-        }
-
-        if (renderEvent) {
           // Get element csvData (csv data)
           if (consoleEvents.value) console.log(event)
           const csvData = id_map.value.get(event.tag)
@@ -310,7 +297,7 @@ function process(message) {
             // Console
             if (consoleEvents.value) console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is not in map!')
           }
-        }
+
 
       }
 
