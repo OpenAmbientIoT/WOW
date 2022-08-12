@@ -43,6 +43,16 @@
         </div>
         <hr>
 
+        <!--Simulate wavelets switch-->
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" v-model="simulationMode" id="sim-checkbox"
+                 @change="simulationSwitched">
+          <label class="form-check-label" for="sim-checkbox" style="color: white">
+            Enable simulation
+          </label>
+        </div>
+        <hr>
+
         <!--Grid look switch-->
         <div class="form-check form-switch mb-3">
           <input class="form-check-input" type="checkbox" v-model="gridMode" id="grid-checkbox">
@@ -59,24 +69,14 @@
         </div>
         <hr>
 
-        <!--Simulate wavelets switch-->
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" v-model="simulationMode" id="sim-checkbox"
-                 @change="simulationSwitched">
-          <label class="form-check-label" for="sim-checkbox" style="color: white">
-            Enable simulation
-          </label>
-        </div>
-        <hr>
-
         <!--Coloring wavelets-->
-        <div class="form-check form-switch mb-3">
+        <div class="form-check form-switch mb-3 d-none">
           <input class="form-check-input" type="checkbox" v-model="isColorWavelets" id="color-wavelets-checkbox">
           <label class="form-check-label" for="color-wavelets-checkbox" style="color: white">
             Colorize wavelets
           </label>
         </div>
-        <hr>
+        <hr class="d-none">
 
         <!--Play sound-->
         <div class="form-check form-switch mb-3">
@@ -106,24 +106,16 @@
         <!-- Rssi scale factor -->
         <div>
           <div class="text-white-50 me-3 mb-2">RSSI scale factor</div>
-          <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
-                 style="max-width: 80px" v-model="rssiScaleFactor">
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="rssiScaleFactor = 5">5</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="rssiScaleFactor = 10">10</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="rssiScaleFactor = 15">15
-          </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="rssiScaleFactor = 20">20
-          </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="rssiScaleFactor = 25">25
-          </button>
+          <input class="form-control form-control-sm mb-2 d-inline-block" type="number" placeholder="Size in pixels"
+                 style="max-width: 80px" v-model="rssiScaleFactor"> <span class="text-muted small">✕ (100 - RSSI)</span>
         </div>
         <hr>
 
-        <!-- Temperature disc timeout -->
+        <!-- Color disk timeout -->
         <div>
-          <div class="text-white-50 me-3 mb-2">Temperature disc timeout</div>
+          <div class="text-white-50 me-3 mb-2">Color disk timeout, s</div>
           <input class="form-control form-control-sm mb-2" type="number" placeholder="Amount in seconds"
-                 style="max-width: 80px" v-model="temperatureDiscTimeout">
+                 style="max-width: 80px" v-model="temperatureDiskTimeout">
         </div>
         <hr>
 
@@ -191,13 +183,13 @@
 </template>
 
 <script setup>
-import {ref, onMounted, reactive} from 'vue'
+import {ref, onMounted, reactive, watch} from 'vue'
 
 const wavelets = ref(new Map())
 const id_map = ref(new Map())
 const rssi = ref(new Map())
 const rssiScaleFactor = ref(1)
-const temperatureDiscTimeout = ref(15)
+const temperatureDiskTimeout = ref(15)
 
 const gridMode = ref(false)
 const consoleEvents = ref(false)
@@ -221,6 +213,17 @@ import {eventsConfig, RSSI, TEMP_C} from "@/assets/js/classes/events/EventsConfi
 import {renderingConfig, SVG, GIF, WEBGL} from "@/assets/js/classes/RenderingConfig";
 
 const eventsTypes = reactive(eventsConfig.eventsTypes)
+// Watch event types list changed to clear RSSI from values
+watch(eventsTypes, (newEventsTypes) => {
+  newEventsTypes.forEach((eventType) => {
+    if (eventType.name == RSSI && !eventType.enabled) {
+      console.log('rssi value cleared')
+      rssi.value.clear()
+    } else if (eventType.name == RSSI && eventType.enabled) {
+      rssi.value.set('test', 1243124)
+    }
+  })
+})
 const renderingTypes = reactive(renderingConfig.types)
 
 import {rgbColor} from "@/assets/js/helpers/temperaturecolor"
@@ -241,7 +244,7 @@ function process(message) {
     return false
   }
 
-  console.log(message)
+  if (consoleEvents.value) console.log(message)
 
   if (typeof message == 'string') {
     // Get event data
@@ -298,7 +301,7 @@ function process(message) {
             wavelets.value.set(wavelet.event.tag, wavelet)
 
             // Console
-            console.log('Tag ' + wavelet.event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is in map. Render.')
+            if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is in map. Render.')
 
             // Sound
             if (isSoundOn.value) {
@@ -312,7 +315,7 @@ function process(message) {
             }
           } else {
             // Console
-            console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is not in map!')
+            if (consoleEvents.value) console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is not in map!')
           }
       }
 
@@ -391,7 +394,7 @@ function clearOld() {
 
     // Extend temperature wavelets lifetime (based on specified color disc time)
     if (wavelet.event.name == TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name == TEMP_C)) {
-      const temperatureWaveletLifetime = temperatureDiscTimeout.value
+      const temperatureWaveletLifetime = temperatureDiskTimeout.value
       lifetime = lifetime < temperatureWaveletLifetime ? (lifetime + temperatureWaveletLifetime - lifetime) : (lifetime)
     }
 
@@ -647,7 +650,7 @@ body
   scrollbar-width: none
   & > div
     display: none
-    background-color: rgba(33, 33, 33, .6)
+    background-color: rgba(33, 33, 33, .8)
     padding: 10px
   &:hover > div
     display: block

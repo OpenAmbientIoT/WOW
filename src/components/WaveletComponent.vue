@@ -52,6 +52,7 @@ const props = defineProps({
   transition: opacity 1s
   transform: translate3d(0, 0, 0)
   opacity: 0
+  z-index: 109
 
   &_fadein
     opacity: 1
