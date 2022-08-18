@@ -1,24 +1,24 @@
 <template>
   <!-- Temperature -->
   <template v-if="wavelet.event.name == TEMP_C">
-    <div :class="'wavelet' + (wavelet.options.fadein ? ' wavelet_fadein' : '' ) + (wavelet.options.fadeout ? ' wavelet_fadeout' : '' )"
+    <div :class="'wavelet-gif' + (wavelet.options.fadein ? ' wavelet-gif_fadein' : '' ) + (wavelet.options.fadeout ? ' wavelet-gif_fadeout' : '' )"
          :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
            + ('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;')">
           <!-- + ('background-image: url(static/wavelet-anim-last-ring.svg?v='+generate()+');') -->
-        <span :class="'wavelet__value'"
+        <span :class="'wavelet-gif__value'"
               :style="`font-size: ${wavelet.size/10 < 6 ? 6 : wavelet.size/10}px;`">{{
             wavelet.event.value ? wavelet.event.value : '-'
           }}°</span>
-      <div v-if="wavelet.colored" class="wavelet-coloring" :style="`background-color: ${wavelet.color}`"></div>
+      <div v-if="wavelet.colored" class="wavelet-gif-coloring" :style="`background-color: ${wavelet.color}`"></div>
     </div>
   </template>
   <!-- All other -->
   <template v-else>
-    <div :class="'wavelet' + (wavelet.options.fadein ? ' wavelet_fadein' : '' ) + (wavelet.options.fadeout ? ' wavelet_fadeout' : '' )"
+    <div :class="'wavelet-gif' + (wavelet.options.fadein ? ' wavelet-gif_fadein' : '' ) + (wavelet.options.fadeout ? ' wavelet-gif_fadeout' : '' )"
          :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
            + ('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;')">
           <!-- + ('background-image: url(static/wavelet-anim-last-ring.svg?v='+generate()+');')-->
-      <span class="wavelet__value" v-if="wavelet.debug"
+      <span class="wavelet-gif__value" v-if="wavelet.debug"
             :style="`color: green; font-size: ${wavelet.size/10 < 6 ? 6 : wavelet.size/10}px;`">{{ wavelet.event.name ? wavelet.event.name : '-' }}</span>
     </div>
   </template>
@@ -38,7 +38,7 @@ const props = defineProps({
 </script>
 
 <style scoped lang="sass">
-.wavelet
+.wavelet-gif
   background-image: url(@/assets/img/wavelet-quality.gif) //currently using the file from the static folder for recreation wavelets with a pseudo different backgrounds (?v=xxxx)
   background-size: contain
   background-position: center
@@ -64,7 +64,7 @@ const props = defineProps({
     z-index: 110
 
 
-.wavelet-coloring
+.wavelet-gif-coloring
   position: absolute
   top: 0
   right: 0

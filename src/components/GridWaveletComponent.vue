@@ -1,5 +1,5 @@
 <template>
-  <div class="wavelet wavelet_eternal" :style="('left:' + (map.x - size/2) + 'px; top:' + (map.y - size/2) + 'px;')
+  <div class="wavelet-gr wavelet-gr_eternal" :style="('left:' + (map.x - size/2) + 'px; top:' + (map.y - size/2) + 'px;')
         + ('width: ' + size + 'px;' + 'height: ' + size + 'px;')"></div>
 
 </template>
@@ -18,7 +18,7 @@ const props = defineProps({
 
 
 
-.wavelet
+.wavelet-gr
   background-image: url(@/assets/img/wavelet-quality.gif) //was bad: using the file from the static folder for recreation wavelets with a pseudo different backgrounds (?v=xxxx)
   background-size: contain
   background-position: center

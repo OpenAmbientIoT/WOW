@@ -107,7 +107,8 @@
         <div>
           <div class="text-white-50 me-3 mb-2">RSSI scale factor</div>
           <input class="form-control form-control-sm mb-2 d-inline-block" type="number" placeholder="Size in pixels"
-                 style="max-width: 80px" v-model="rssiScaleFactor"> <span class="text-muted small">✕ (100 - RSSI)</span>
+                 style="max-width: 80px" v-model="rssiScaleFactor"> <span class="text-muted small ms-3"> Average RSSI {{ averageRssi }}</span>
+          <div class="text-muted mt-1 font-monospace" style="font-size: 9px">ui size * (scale/10) * (average rssi/rssi)</div>
         </div>
         <hr>
 
@@ -167,6 +168,32 @@
         </div>
         <hr>
 
+        <!-- RSSI size for events -->
+        <div>
+          <span class="text-white-50 me-1">RSSI-based size</span>
+          <div class="form-check form-switch mb-1" v-for="rssiResizeEvent in rssiResizeEvents" :key="rssiResizeEvent.event">
+            <input class="form-check-input" type="checkbox" v-model="rssiResizeEvent.enabled"
+                   :id="`rssi-event-size-checkbox-${rssiResizeEvent.event}`">
+            <label class="form-check-label" :for="`rssi-event-size-checkbox-${rssiResizeEvent.event}`" style="color: white">
+              {{ rssiResizeEvent.event }}
+            </label>
+          </div>
+        </div>
+        <hr>
+
+        <!-- Console log -->
+        <div>
+          <span class="text-white-50 me-1">Console log</span>
+          <div class="form-check form-switch mb-1" v-for="consoleSetting in consoleSettings" :key="consoleSetting.name">
+            <input class="form-check-input" type="checkbox" v-model="consoleSetting.state.value"
+                   :id="`console-log-checkbox-${consoleSetting.name}`">
+            <label class="form-check-label" :for="`console-log-checkbox-${consoleSetting.name}`" style="color: white">
+              {{ consoleSetting.name }}
+            </label>
+          </div>
+        </div>
+        <hr>
+
 
         <!--UI Position-->
         <div>
@@ -193,6 +220,15 @@ const temperatureDiskTimeout = ref(15)
 
 const gridMode = ref(false)
 const consoleEvents = ref(false)
+const consoleRenderingInfo = ref(false)
+const consoleLifetimeInfo = ref(false)
+const consoleFadingInfo = ref(false)
+const consoleSettings = [
+  {state: consoleEvents, name: 'Events'},
+  {state: consoleRenderingInfo, name: 'Rendering'},
+  {state: consoleLifetimeInfo, name: 'Lifetime'},
+  {state: consoleFadingInfo, name: 'Fading'}
+]
 
 import mqttclient from "@/assets/js/mqttclient";
 import WaveletElement from "@/assets/js/classes/WaveletElement";
@@ -217,14 +253,14 @@ const eventsTypes = reactive(eventsConfig.eventsTypes)
 watch(eventsTypes, (newEventsTypes) => {
   newEventsTypes.forEach((eventType) => {
     if (eventType.name == RSSI && !eventType.enabled) {
-      console.log('rssi value cleared')
       rssi.value.clear()
-    } else if (eventType.name == RSSI && eventType.enabled) {
-      rssi.value.set('test', 1243124)
+      averageRssi.value = 65
     }
   })
 })
 const renderingTypes = reactive(renderingConfig.types)
+
+const rssiResizeEvents = reactive(rssiConfig.resizeEvents)
 
 import {rgbColor} from "@/assets/js/helpers/temperaturecolor"
 import {humanReadableTime} from "@/assets/js/helpers/time"
@@ -236,6 +272,8 @@ import EventsBuilder from "@/assets/js/classes/EventsBuilder"
 
 const minCelsius = ref(20)
 const maxCelsius = ref(30)
+const averageRssi = ref(65)
+let lastRssiCalculation = 0
 
 
 // Parse event message, create wavelet element, inject necessary data into wavelet
@@ -251,82 +289,87 @@ function process(message) {
     const event = EventsBuilder.parse(message, eventsTypes)
     if (event) {
 
-      // Do not render RSSI (don't add to wavelets list)
+      // Add RSSI value (don't add to wavelets list) and calculate average RSSI
       if (event.name == RSSI) {
         rssi.value.set(event.tag, event.raw)
-      // Render all OTHER events (add to wavelets list)
-      } else {
+        // Prevent from average being calculated too often
+        const secondsPassed = Math.floor((new Date() - lastRssiCalculation)/1000)
+        if (lastRssiCalculation === 0 || secondsPassed > 5) {
+          averageRssi.value = calculateAverageRssi(rssi.value)
+          lastRssiCalculation = new Date()
+        }
+      }
 
-          // Get element csvData (csv data)
-          if (consoleEvents.value) console.log(event)
-          const csvData = id_map.value.get(event.tag)
-          if (csvData) {
-            // Create new wavelet element
-            const wavelet = new WaveletElement();
-            wavelet.event = event
-            // When non TEMP_C event check if we have already TEMP_C wavelet
-            if (event.name != TEMP_C && wavelets.value.has(event.tag)) {
-              const existing = wavelets.value.get(event.tag)
-              if (existing.event.name == TEMP_C) {
-                wavelet.predecessor = existing
-              } else if (existing.predecessor && existing.predecessor.event.name == TEMP_C) {
-                wavelet.predecessor = existing.predecessor
-              }
-              // Update current event timestamp to increase living time to predecessor
-              // !!! not necessary since we are using 'wavelet.created' value
-              if (wavelet.predecessor && (wavelet.predecessor.event.timestamp > wavelet.event.timestamp)) {
-                wavelet.event.timestamp = wavelet.predecessor.event.timestamp
-              }
-            }
-
-            const color = rgbColor(wavelet.event.value, minCelsius.value, maxCelsius.value)
-            wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
-
-            // Get size
-            let size = waveletSize.value
-            // Try RSSI
-            if (rssi.value.has(event.tag)) {
-              size = toSize(rssi.value.get(event.tag), rssiScaleFactor.value)
-              // Try CSV data
-            } else if (csvData.size) {
-              size = csvData.size
-            }
-            wavelet.size = size
-
-            wavelet.basicSize = waveletSize.value
-
-            wavelet.colored = isColorWavelets.value
-            wavelet.debug = debugMode.value
-            wavelet.inject(csvData)
-            wavelets.value.set(wavelet.event.tag, wavelet)
-
-            // Console
-            if (consoleEvents.value) console.log('Tag ' + wavelet.event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is in map. Render.')
-
-            // Sound
-            if (isSoundOn.value) {
-              const sound = new Audio('static/sound/bell-high.mp3')
-              sound.play()
-            }
-
-            // Canvas Case
-            if (selectedRenderingType.value == WEBGL) {
-              drawWavelet(wavelet)
-            }
-          } else {
-            // Console
-            if (consoleEvents.value) console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is not in map!')
+      // Get element tagCsvData (csv data)
+      if (consoleEvents.value) console.log(event)
+      const tagCsvData = id_map.value.get(event.tag)
+      if (tagCsvData) {
+        // Create new wavelet element
+        const wavelet = new WaveletElement();
+        wavelet.event = event
+        // When non TEMP_C event check if we have already TEMP_C wavelet
+        if (event.name != TEMP_C && wavelets.value.has(event.tag)) {
+          const existing = wavelets.value.get(event.tag)
+          if (existing.event.name == TEMP_C) {
+            wavelet.predecessor = existing
+          } else if (existing.predecessor && existing.predecessor.event.name == TEMP_C) {
+            wavelet.predecessor = existing.predecessor
           }
+          // Update current event timestamp to increase living time to predecessor
+          // !!! not necessary since we are using 'wavelet.created' value
+          if (wavelet.predecessor && (wavelet.predecessor.event.timestamp > wavelet.event.timestamp)) {
+            wavelet.event.timestamp = wavelet.predecessor.event.timestamp
+          }
+        }
+
+        const color = rgbColor(wavelet.event.value, minCelsius.value, maxCelsius.value)
+        wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
+
+        // Get size
+        let size = waveletSize.value
+        // Try RSSI
+        if (rssi.value.has(event.tag) && isRssiSizeForEventEnabled(event.name)) {
+          size = toSize(averageRssi.value, rssi.value.get(event.tag), rssiScaleFactor.value, waveletSize.value)
+          // Try CSV data
+        } else if (tagCsvData.size) {
+          size = tagCsvData.size
+        }
+        wavelet.size = size
+
+        wavelet.basicSize = waveletSize.value
+
+        wavelet.colored = isColorWavelets.value
+        wavelet.debug = debugMode.value
+        wavelet.inject(tagCsvData)
+        wavelets.value.set(wavelet.event.tag, wavelet)
+
+        // Console
+        if (consoleRenderingInfo.value) console.log('Tag ' + wavelet.event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is in map. Render.')
+
+        // Sound
+        if (isSoundOn.value) {
+          const sound = new Audio('static/sound/bell-high.mp3')
+          sound.play()
+        }
+
+        // Canvas Case
+        if (selectedRenderingType.value == WEBGL) {
+          drawWavelet(wavelet)
+        }
+      } else {
+        // Console
+        if (consoleRenderingInfo.value) console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is not in map!')
       }
 
 
     } else {
-      if (consoleEvents.value) console.log('Skip message ' + message)
+      if (consoleEvents.value) console.log('Skip message "' + message + '" (can\'t parse)')
     }
   }
 }
 
 import {parse} from "@/assets/js/helpers/csv"
+
 function openFile(event) {
   let input = event.target;
   const reader = new FileReader();
@@ -386,7 +429,7 @@ function runSimulation() {
   setTimeout(runSimulation, Math.floor(Math.random() * 10) + 1)
 }
 
-function clearOld() {
+function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
     let lifetime = 10 // seconds
@@ -403,7 +446,7 @@ function clearOld() {
 
     if (!wavelet.options.fadein) {
       // Fadein
-      if (consoleEvents.value) console.log('Time to fadein for #' + wavelet.id)
+      if (consoleFadingInfo.value) console.log('Time to fadein for #' + wavelet.id)
       wavelet.options.fadein = true
     }
 
@@ -412,20 +455,20 @@ function clearOld() {
     if (wavelet.event.name == TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name == TEMP_C)) {
       if (seconds >= ringsLifetime - 1 && !wavelet.options.ringsFadeout) {
         // Fadeout rings
-        if (consoleEvents.value) console.log('Time to fadeout rings for #' + wavelet.id)
+        if (consoleFadingInfo.value) console.log('Time to fadeout rings for #' + wavelet.id)
         wavelet.options.ringsFadeout = true
       }
     }
 
     if (seconds >= lifetime - 1 && !wavelet.options.fadeout) {
       // Fadeout
-      if (consoleEvents.value) console.log('Time to fadeout for #' + wavelet.id)
+      if (consoleFadingInfo.value) console.log('Time to fadeout for #' + wavelet.id)
       wavelet.options.fadeout = true
     }
 
     if (seconds >= lifetime) {
       // Time to remove
-      if (consoleEvents.value) console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.id + ' – removing')
+      if (consoleLifetimeInfo.value) console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.id + ' – removing')
       wavelets.value.delete(wavelet.event.tag)
 
       // Remove from Canvas
@@ -437,7 +480,7 @@ function clearOld() {
     }
   })
 
-  setTimeout(clearOld, 100)
+  setTimeout(inspectWavelets, 100)
 }
 
 const debugMode = ref(false)
@@ -482,7 +525,7 @@ const uiConfiguration = reactive({
 // Pixi / Canvas/ WebGL 2
 // eslint-disable-next-line
 import * as PIXI from 'pixi.js'
-import {toSize} from "@/assets/js/helpers/rssi";
+import {toSize, calculateAverageRssi, rssiConfig, isRssiSizeForEventEnabled} from "@/assets/js/helpers/rssi";
 
 const pixi = new PIXI.Application({
   width: window.innerWidth,
@@ -545,9 +588,6 @@ function ticks() {
  * @param wavelet WaveletElement
  */
 function drawWavelet(wavelet) {
-  console.log('drawWavelet triggered')
-  console.log(wavelet)
-
   // Create wavelet container
   const waveletContainer = new PIXI.Container()
   waveletContainer.width = waveletSize.value
@@ -616,7 +656,7 @@ onMounted(() => {
     connect()
   }
   // Remove expired wavelets
-  clearOld()
+  inspectWavelets()
   // Empty map
   id_map.value = new Map()
   // Pixi / canvas / WebGL
@@ -648,15 +688,17 @@ body
   overflow-x: hidden
   overflow-y: auto
   scrollbar-width: none
+
   & > div
     display: none
-    background-color: rgba(33, 33, 33, .8)
+    background-color: rgba(33, 33, 33, .95)
     padding: 10px
+
   &:hover > div
     display: block
+
   &::-webkit-scrollbar
     display: none
-
 
 
 .ui-container-toggle

@@ -1,29 +1,96 @@
 /**
- * Simple implementation
+ * last, can you change the scaling factor equation to this:
+ * size = (Disk Size)*(Scale Factor / 10) *(average RSSI / RSSI)
+ *
+ * where:
+ * size = rendered RSSI event size
+ * disk size = user input disk size
+ * scale factor = user input scale factor
+ * RSSI = RSSI event data
+ * average RSSI = 65
+ *
+ * Convert RSSI value to wavelet size
+ * @param {number} avgRssi  Average RSSI value
  * @param {number} rssi  RSSI value (higher value = lower signal) (suggested: e.g 80 meaning -80db, 60 — -60db, etc.)
  * @param {number} scale Multiplier for final size
+ * @param {number} size UI disk size
  */
-export function toSize(rssi, scale) {
-    //const minRssi = 60 // size * 2
-    //const maxRssi = 80 // size
-    //const difRssi = maxRssi - minRssi
+export function toSize(avgRssi, rssi, scale, size) {
+    return size * (scale/10) * (avgRssi/rssi)
+}
 
-    // minRssi / maxRssi = 2x / x
-    // 0.75 = x
+/**
+ *
+ * @param {Map} rssis List of RSSI values for tags
+ * @returns {number} Average RSSI value
+ */
+export function calculateAverageRssi(rssis) {
+    let sum = 0
+    rssis.forEach((value) => {
+        sum += Number.parseFloat(value)
+    })
+    const avg = (sum / rssis.size).toFixed(1)
+    console.log(avg)
+    return avg
+}
 
-    // 100 - 100 = 0
-    // 100 - 80 = 20
-    // 100 - 60 = 40
-    // 100 - 40 = 60
-    // 100 - 20 = 80
+import {RSSI, TEMP_C, DBUG, ACTV, LOCH, GEOLOC} from "@/assets/js/classes/events/EventsConfig"
 
-    // 20, 40, 60, 80, 100
-    // 4s  3s  2s  1s  0...
+/**
+ * RSSI config
+ * resizeEvents – events list for which will be applied calculated RSSI size if enabled
+ * @type {{resizeEvents: [{event: string, enabled: boolean},{event: string, enabled: boolean},{event: string, enabled: boolean},{event: string, enabled: boolean},{event: string, enabled: boolean},null]}}
+ */
+export const rssiConfig = {
+    resizeEvents: [
+        {
+            event: RSSI,
+            enabled: true,
+        },
+        {
+            event: TEMP_C,
+            enabled: false,
+        },
+        {
+            event: DBUG,
+            enabled: false,
+        },
+        {
+            event: ACTV,
+            enabled: false,
+        },
+        {
+            event: LOCH,
+            enabled: false,
+        },
+        {
+            event: GEOLOC,
+            enabled: false,
+        },
+    ]
+}
 
-    // Invert RSSI in this simple way
-    let invertedRssi = 100 - rssi
-    if (invertedRssi < 0) invertedRssi = 1
+export function isRssiSizeForEventEnabled(event) {
+    return rssiConfig.resizeEvents.find(eventConf => (eventConf.event === event && eventConf.enabled === true))
+}
 
-    let size = scale * (invertedRssi)
-    return size
+export function isRssiSizeForEventEnabledI(event) {
+    let eventEnabled = false
+    rssiConfig.resizeEvents.forEach((eventConf) => {
+        if (eventConf.event == event && eventConf.enabled === true) {
+            eventEnabled = true
+        }
+    })
+    return eventEnabled
+}
+
+export function isRssiSizeForEventEnabledA(event) {
+    const enabled = rssiConfig.resizeEvents.map((eventConf) => {
+        if (eventConf.event == event && eventConf.enabled === true) {
+            return true
+        }
+        return false
+    })
+
+    return enabled
 }
