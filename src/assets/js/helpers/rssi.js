@@ -49,23 +49,23 @@ export const rssiConfig = {
         },
         {
             event: TEMP_C,
-            enabled: false,
+            enabled: true,
         },
         {
             event: DBUG,
-            enabled: false,
+            enabled: true,
         },
         {
             event: ACTV,
-            enabled: false,
+            enabled: true,
         },
         {
             event: LOCH,
-            enabled: false,
+            enabled: true,
         },
         {
             event: GEOLOC,
-            enabled: false,
+            enabled: true,
         },
     ]
 }
