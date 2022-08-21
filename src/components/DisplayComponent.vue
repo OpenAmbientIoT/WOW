@@ -272,7 +272,7 @@ import EventsBuilder from "@/assets/js/classes/EventsBuilder"
 
 const minCelsius = ref(20)
 const maxCelsius = ref(30)
-const averageRssi = ref(65)
+const averageRssi = ref(79)
 let lastRssiCalculation = 0
 
 
@@ -290,11 +290,11 @@ function process(message) {
     if (event) {
 
       // Add RSSI value (don't add to wavelets list) and calculate average RSSI
-      if (event.name == RSSI) {
+      if (event.name === RSSI) {
         rssi.value.set(event.tag, event.raw)
         // Prevent from average being calculated too often
         const secondsPassed = Math.floor((new Date() - lastRssiCalculation)/1000)
-        if (lastRssiCalculation === 0 || secondsPassed > 5) {
+        if (lastRssiCalculation === 0 || secondsPassed > 60) {
           averageRssi.value = calculateAverageRssi(rssi.value)
           lastRssiCalculation = new Date()
         }
@@ -307,12 +307,13 @@ function process(message) {
         // Create new wavelet element
         const wavelet = new WaveletElement();
         wavelet.event = event
+        wavelet.id = event.tag
         // When non TEMP_C event check if we have already TEMP_C wavelet
-        if (event.name != TEMP_C && wavelets.value.has(event.tag)) {
+        if (event.name !== TEMP_C && wavelets.value.has(event.tag)) {
           const existing = wavelets.value.get(event.tag)
-          if (existing.event.name == TEMP_C) {
+          if (existing.event.name === TEMP_C) {
             wavelet.predecessor = existing
-          } else if (existing.predecessor && existing.predecessor.event.name == TEMP_C) {
+          } else if (existing.predecessor && existing.predecessor.event.name === TEMP_C) {
             wavelet.predecessor = existing.predecessor
           }
           // Update current event timestamp to increase living time to predecessor
@@ -341,10 +342,10 @@ function process(message) {
         wavelet.colored = isColorWavelets.value
         wavelet.debug = debugMode.value
         wavelet.inject(tagCsvData)
-        wavelets.value.set(wavelet.event.tag, wavelet)
+        wavelets.value.set(event.tag, wavelet)
 
         // Console
-        if (consoleRenderingInfo.value) console.log('Tag ' + wavelet.event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is in map. Render.')
+        if (consoleRenderingInfo.value) console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is in map. Render.')
 
         // Sound
         if (isSoundOn.value) {
@@ -353,7 +354,7 @@ function process(message) {
         }
 
         // Canvas Case
-        if (selectedRenderingType.value == WEBGL) {
+        if (selectedRenderingType.value === WEBGL) {
           drawWavelet(wavelet)
         }
       } else {
@@ -384,8 +385,6 @@ function openFile(event) {
 
 
 const simulationMode = ref(false)
-
-
 function simulationSwitched() {
   if (simulationMode.value === true) {
     disconnect()
@@ -396,7 +395,15 @@ function simulationSwitched() {
     connect()
   }
 }
-
+function runSimulation() {
+  if (simulationMode.value === false) {
+    return false
+  }
+  connectionState.value = !connectionState.value
+  const message = generateMessage()
+  process(message)
+  setTimeout(runSimulation, Math.floor(Math.random() * 10) + 1)
+}
 const connectionState = ref(true)
 const connectionStatus = ref('red')
 
@@ -419,16 +426,6 @@ function generateMessage() {
   return message
 }
 
-function runSimulation() {
-  if (simulationMode.value === false) {
-    return false
-  }
-  connectionState.value = !connectionState.value
-  const message = generateMessage()
-  process(message)
-  setTimeout(runSimulation, Math.floor(Math.random() * 10) + 1)
-}
-
 function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
@@ -446,7 +443,7 @@ function inspectWavelets() {
 
     if (!wavelet.options.fadein) {
       // Fadein
-      if (consoleFadingInfo.value) console.log('Time to fadein for #' + wavelet.id)
+      if (consoleFadingInfo.value) console.log('Time to fadein for #' + wavelet.event.tag)
       wavelet.options.fadein = true
     }
 
@@ -455,20 +452,20 @@ function inspectWavelets() {
     if (wavelet.event.name == TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name == TEMP_C)) {
       if (seconds >= ringsLifetime - 1 && !wavelet.options.ringsFadeout) {
         // Fadeout rings
-        if (consoleFadingInfo.value) console.log('Time to fadeout rings for #' + wavelet.id)
+        if (consoleFadingInfo.value) console.log('Time to fadeout rings for #' + wavelet.event.tag)
         wavelet.options.ringsFadeout = true
       }
     }
 
     if (seconds >= lifetime - 1 && !wavelet.options.fadeout) {
       // Fadeout
-      if (consoleFadingInfo.value) console.log('Time to fadeout for #' + wavelet.id)
+      if (consoleFadingInfo.value) console.log('Time to fadeout for #' + wavelet.event.tag)
       wavelet.options.fadeout = true
     }
 
     if (seconds >= lifetime) {
       // Time to remove
-      if (consoleLifetimeInfo.value) console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.id + ' – removing')
+      if (consoleLifetimeInfo.value) console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.event.tag + ' – removing')
       wavelets.value.delete(wavelet.event.tag)
 
       // Remove from Canvas

@@ -29,9 +29,7 @@ export function calculateAverageRssi(rssis) {
     rssis.forEach((value) => {
         sum += Number.parseFloat(value)
     })
-    const avg = (sum / rssis.size).toFixed(1)
-    console.log(avg)
-    return avg
+    return (sum / rssis.size).toFixed(1)
 }
 
 import {RSSI, TEMP_C, DBUG, ACTV, LOCH, GEOLOC} from "@/assets/js/classes/events/EventsConfig"

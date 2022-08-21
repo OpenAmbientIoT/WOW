@@ -1,7 +1,6 @@
-import {generate} from "@/assets/js/helpers/id";
 export default class RenderingElement {
     constructor() {
-        this.id = generate()
+        this.id = null
         this.x = 0
         this.y = 0
         this.created = Date.now()
