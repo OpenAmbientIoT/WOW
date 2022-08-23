@@ -48,7 +48,7 @@
           <input class="form-check-input" type="checkbox" v-model="simulationMode" id="sim-checkbox"
                  @change="simulationSwitched">
           <label class="form-check-label" for="sim-checkbox" style="color: white">
-            Enable simulation ▶
+            Enable simulation ▹
           </label>
         </div>
         <hr>
@@ -57,7 +57,7 @@
         <div class="form-check form-switch mb-3">
           <input class="form-check-input" type="checkbox" v-model="gridMode" id="grid-checkbox">
           <label class="form-check-label" for="grid-checkbox" style="color: white">
-            Grid mode ▦
+            Grid mode ܍
           </label>
         </div>
         <!-- Crosshair cursor switch        -->
@@ -82,7 +82,7 @@
         <div class="form-check form-switch mb-3">
           <input class="form-check-input" type="checkbox" v-model="isSoundOn" id="sound-on-checkbox">
           <label class="form-check-label" for="sound-on-checkbox" style="color: white">
-            Sound 🔊
+            Sound 🔉
           </label>
         </div>
         <div class="form-check form-switch mb-3">
@@ -724,6 +724,9 @@ onMounted(() => {
     appSettings.basicSize ? basicSize.value = appSettings.basicSize : null
     appSettings.diskSize ? diskSize.value = appSettings.diskSize : null
     appSettings.rssiScaleFactor ? rssiScaleFactor.value = appSettings.rssiScaleFactor : null
+    appSettings.temperatureDiskTimeout ? temperatureDiskTimeout.value = appSettings.temperatureDiskTimeout : null
+    appSettings.minCelsius ? minCelsius.value = appSettings.minCelsius : null
+    appSettings.maxCelsius ? maxCelsius.value = appSettings.maxCelsius : null
   }
 
   // Simulation / connect
@@ -748,17 +751,28 @@ onMounted(() => {
 watch([
       basicSize,
       diskSize,
+      rssiScaleFactor,
+      temperatureDiskTimeout,
+      minCelsius,
+      maxCelsius,
     ],
     ([
        basicSizeNew,
        diskSizeNew,
+       rssiScaleFactorNew,
+       temperatureDiskTimeoutNew,
+       minCelsiusNew,
+       maxCelsiusNew,
      ]) => {
       if (!appSettings) {
         appSettings = {}
       }
       appSettings.basicSize = basicSizeNew
       appSettings.diskSize = diskSizeNew
-      appSettings.rssiScaleFactor = rssiScaleFactor
+      appSettings.rssiScaleFactor = rssiScaleFactorNew
+      appSettings.temperatureDiskTimeout = temperatureDiskTimeoutNew
+      appSettings.minCelsius = minCelsiusNew
+      appSettings.maxCelsius = maxCelsiusNew
       localStorage.setItem('appSettings', JSON.stringify(appSettings))
     })
 </script>
