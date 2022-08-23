@@ -16,7 +16,7 @@
     <!-- Grid mode enabled -->
     <template v-if="gridMode">
       <template v-for="[key, map] in id_map" :key="key">
-        <GridWaveletComponent :size="waveletSize" :map="map"/>
+        <GridWaveletComponent :size="basicSize" :map="map"/>
       </template>
 
       <!-- Coordinates tooltip -->
@@ -48,7 +48,7 @@
           <input class="form-check-input" type="checkbox" v-model="simulationMode" id="sim-checkbox"
                  @change="simulationSwitched">
           <label class="form-check-label" for="sim-checkbox" style="color: white">
-            Enable simulation
+            Enable simulation ▶
           </label>
         </div>
         <hr>
@@ -57,7 +57,7 @@
         <div class="form-check form-switch mb-3">
           <input class="form-check-input" type="checkbox" v-model="gridMode" id="grid-checkbox">
           <label class="form-check-label" for="grid-checkbox" style="color: white">
-            Grid mode
+            Grid mode ▦
           </label>
         </div>
         <!-- Crosshair cursor switch        -->
@@ -82,23 +82,55 @@
         <div class="form-check form-switch mb-3">
           <input class="form-check-input" type="checkbox" v-model="isSoundOn" id="sound-on-checkbox">
           <label class="form-check-label" for="sound-on-checkbox" style="color: white">
-            Sound
+            Sound 🔊
           </label>
+        </div>
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" v-model="isSoundSimultaneous" id="sound-simultaneous-checkbox">
+          <label class="form-check-label" for="sound-simultaneous-checkbox" style="color: white">
+            Play simultaneous
+          </label>
+        </div>
+        <!-- specify mp3 -->
+        <div class="text-white-50 small mb-2">Select mp3</div>
+        <select class="form-select form-select-sm mb-1" aria-label="" v-model="soundFileName" @change="soundFileChanged">
+          <option v-for="file in soundLibrary.files" :value="file" :key="file">{{ file }}</option>
+        </select>
+        <!-- upload mp3 -->
+        <div class="mb-3">
+          <label for="mp3-upload" class="form-label small"><span class="text-white-50">Or upload mp3</span></label>
+          <input class="form-control form-control-sm" id="mp3-upload" type="file" @change="uploadMp3">
         </div>
         <hr>
 
-        <!-- Wavelet size -->
+        <!-- Basic wavelet size -->
         <div>
-          <div class="text-white-50 me-3 mb-2">Disk size</div>
+          <div class="text-white-50 me-3 mb-2">Basic wavelet size ↔</div>
           <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
-                 style="max-width: 80px" v-model="waveletSize">
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 32">32</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 64">64</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 128">128
+                 style="max-width: 80px" v-model="basicSize">
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 32">32</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 64">64</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 128">128
           </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 196">196
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 196">196
           </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="waveletSize = 256">256
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 256">256
+          </button>
+        </div>
+        <hr>
+
+        <!-- Disk size -->
+        <div>
+          <div class="text-white-50 me-3 mb-2">Disk size ↔</div>
+          <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
+                 style="max-width: 80px" v-model="diskSize">
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 32">32</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 64">64</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 128">128
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 196">196
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 256">256
           </button>
         </div>
         <hr>
@@ -272,8 +304,8 @@ import EventsBuilder from "@/assets/js/classes/EventsBuilder"
 
 const minCelsius = ref(20)
 const maxCelsius = ref(30)
-const averageRssi = ref(79)
-let lastRssiCalculation = 0
+const averageRssi = ref(70)
+//let lastRssiCalculation = 0
 
 
 // Parse event message, create wavelet element, inject necessary data into wavelet
@@ -293,11 +325,11 @@ function process(message) {
       if (event.name === RSSI) {
         rssi.value.set(event.tag, event.raw)
         // Prevent from average being calculated too often
-        const secondsPassed = Math.floor((new Date() - lastRssiCalculation)/1000)
-        if (lastRssiCalculation === 0 || secondsPassed > 60) {
-          averageRssi.value = calculateAverageRssi(rssi.value)
-          lastRssiCalculation = new Date()
-        }
+        //const secondsPassed = Math.floor((new Date() - lastRssiCalculation)/1000)
+        //if (lastRssiCalculation === 0 || secondsPassed > 60) {
+        //  averageRssi.value = calculateAverageRssi(rssi.value)
+        //  lastRssiCalculation = new Date()
+        //}
       }
 
       // Get element tagCsvData (csv data)
@@ -327,17 +359,18 @@ function process(message) {
         wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
 
         // Get size
-        let size = waveletSize.value
+        let size = basicSize.value
         // Try RSSI
         if (rssi.value.has(event.tag) && isRssiSizeForEventEnabled(event.name)) {
-          size = toSize(averageRssi.value, rssi.value.get(event.tag), rssiScaleFactor.value, waveletSize.value)
+          size = toSize(averageRssi.value, rssi.value.get(event.tag), rssiScaleFactor.value, basicSize.value)
           // Try CSV data
         } else if (tagCsvData.size) {
           size = tagCsvData.size
         }
         wavelet.size = size
 
-        wavelet.basicSize = waveletSize.value
+        wavelet.basicSize = basicSize.value
+        wavelet.diskSize = diskSize.value
 
         wavelet.colored = isColorWavelets.value
         wavelet.debug = debugMode.value
@@ -349,7 +382,9 @@ function process(message) {
 
         // Sound
         if (isSoundOn.value) {
-          const sound = new Audio('static/sound/bell-high.mp3')
+          if (isSoundSimultaneous.value) {
+            sound = new Audio(soundFilePath)
+          }
           sound.play()
         }
 
@@ -402,7 +437,7 @@ function runSimulation() {
   connectionState.value = !connectionState.value
   const message = generateMessage()
   process(message)
-  setTimeout(runSimulation, Math.floor(Math.random() * 10) + 1)
+  setTimeout(runSimulation, Math.floor(Math.random() * 1000) + 1)
 }
 const connectionState = ref(true)
 const connectionStatus = ref('red')
@@ -482,8 +517,29 @@ function inspectWavelets() {
 
 const debugMode = ref(false)
 const isColorWavelets = ref(false)
+
+
+import {soundLibrary} from "@/assets/js/helpers/sound";
 const isSoundOn = ref(false)
-const waveletSize = ref(128)
+const isSoundSimultaneous = ref(false)
+const soundFolderPath = 'static/sound/'
+const soundFileName = ref('bell-high.mp3')
+let soundFilePath = soundFolderPath + soundFileName.value
+let sound = new Audio(soundFilePath)
+// Update sound file if changed
+function soundFileChanged() {
+  soundFilePath = soundFolderPath + soundFileName.value
+  sound = new Audio(soundFilePath)
+}
+function uploadMp3(event) {
+  let input = event.target;
+  if (!input.files.length) return
+  soundFilePath = URL.createObjectURL(input.files[0]);
+  sound = new Audio(soundFilePath)
+}
+
+const basicSize = ref(128)
+const diskSize = ref(128)
 
 const mouse_x = ref(0)
 const mouse_y = ref(0)
@@ -522,7 +578,7 @@ const uiConfiguration = reactive({
 // Pixi / Canvas/ WebGL 2
 // eslint-disable-next-line
 import * as PIXI from 'pixi.js'
-import {toSize, calculateAverageRssi, rssiConfig, isRssiSizeForEventEnabled} from "@/assets/js/helpers/rssi";
+import {toSize, rssiConfig, isRssiSizeForEventEnabled} from "@/assets/js/helpers/rssi";
 
 const pixi = new PIXI.Application({
   width: window.innerWidth,
@@ -587,8 +643,8 @@ function ticks() {
 function drawWavelet(wavelet) {
   // Create wavelet container
   const waveletContainer = new PIXI.Container()
-  waveletContainer.width = waveletSize.value
-  waveletContainer.height = waveletSize.value
+  waveletContainer.width = basicSize.value
+  waveletContainer.height = basicSize.value
   waveletContainer.x = wavelet.x
   waveletContainer.y = wavelet.y
   waveletContainer.pivot.x = waveletContainer.width / 2
@@ -599,8 +655,8 @@ function drawWavelet(wavelet) {
   //waveletContainer.toGlobal(new PIXI.Point(0,0))
 
   //const sprite = new PIXI.Sprite(texture)
-  //sprite.width = waveletSize.value
-  //sprite.height = waveletSize.value
+  //sprite.width = basicSize.value
+  //sprite.height = basicSize.value
   //waveletContainer.addChild(sprite)
 
   // Wavelet inner circles
@@ -608,7 +664,7 @@ function drawWavelet(wavelet) {
   let circle = new PIXI.Graphics();
   circle.lineStyle(3, 0xffffff, 1)
   //circle.beginFill(0xDBE5DC);
-  circle.drawCircle(0, 0, waveletSize.value * 0.1)
+  circle.drawCircle(0, 0, basicSize.value * 0.1)
   //circle.endFill()
   //circle.maxSegments = 12
   //circle.maxLength = 5

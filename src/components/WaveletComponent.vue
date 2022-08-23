@@ -2,14 +2,14 @@
 <template>
   <div v-if="wavelet.event.name == TEMP_C"
        :class="'shine' + (wavelet.options.fadein ? ' shine_fadein' : '' ) + (wavelet.options.fadeout ? ' shine_fadeout' : '' )"
-       :style="('left:' + (wavelet.x - wavelet.basicSize*1/2) + 'px; top:' + (wavelet.y - wavelet.basicSize*1/2) + 'px;')
-           + ('width: ' + wavelet.basicSize*1 + 'px;' + 'height: ' + wavelet.basicSize*1 + 'px;') + ('background-color:' + wavelet.color + ';') +
-           ('-webkit-filter: blur(' + wavelet.basicSize/5 + 'px)')"></div>
+       :style="('left:' + (wavelet.x - wavelet.diskSize*1/2) + 'px; top:' + (wavelet.y - wavelet.diskSize*1/2) + 'px;')
+           + ('width: ' + wavelet.diskSize*1 + 'px;' + 'height: ' + wavelet.diskSize*1 + 'px;') + ('background-color:' + wavelet.color + ';') +
+           ('-webkit-filter: blur(' + wavelet.diskSize/5 + 'px)')"></div>
   <div v-else-if="wavelet.predecessor && wavelet.predecessor.event.name == TEMP_C"
        :class="'shine' + (wavelet.predecessor.options.fadein ? ' shine_fadein' : '' ) + (wavelet.predecessor.options.fadeout ? ' shine_fadeout' : '' )"
-       :style="('left:' + (wavelet.x - wavelet.basicSize*1/2) + 'px; top:' + (wavelet.y - wavelet.basicSize*1/2) + 'px;')
-           + ('width: ' + wavelet.basicSize*1 + 'px;' + 'height: ' + wavelet.basicSize*1 + 'px;') + ('background-color:' + wavelet.predecessor.color + ';') +
-           ('-webkit-filter: blur(' + wavelet.basicSize/5 + 'px)')"></div>
+       :style="('left:' + (wavelet.x - wavelet.diskSize*1/2) + 'px; top:' + (wavelet.y - wavelet.diskSize*1/2) + 'px;')
+           + ('width: ' + wavelet.diskSize*1 + 'px;' + 'height: ' + wavelet.diskSize*1 + 'px;') + ('background-color:' + wavelet.predecessor.color + ';') +
+           ('-webkit-filter: blur(' + wavelet.diskSize/5 + 'px)')"></div>
   <div :class="'wavelet' + (wavelet.options.fadein ? ' wavelet_fadein' : '' )
     + (wavelet.options.fadeout ? ' wavelet_fadeout' : '' )
     + (wavelet.options.ringsFadeout ? ' wavelet_fadeout' : '' )"

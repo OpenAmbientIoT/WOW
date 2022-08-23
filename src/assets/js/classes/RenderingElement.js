@@ -7,6 +7,7 @@ export default class RenderingElement {
 
         this.size = 128
         this.basicSize = 128
+        this.diskSize = 128
         this.colored = false
         this.debug = false
 
