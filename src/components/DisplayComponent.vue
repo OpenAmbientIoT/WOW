@@ -86,14 +86,16 @@
           </label>
         </div>
         <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" v-model="isSoundSimultaneous" id="sound-simultaneous-checkbox">
+          <input class="form-check-input" type="checkbox" v-model="isSoundSimultaneous"
+                 id="sound-simultaneous-checkbox">
           <label class="form-check-label" for="sound-simultaneous-checkbox" style="color: white">
             Play simultaneous
           </label>
         </div>
         <!-- specify mp3 -->
         <div class="text-white-50 small mb-2">Select mp3</div>
-        <select class="form-select form-select-sm mb-1" aria-label="" v-model="soundFileName" @change="soundFileChanged">
+        <select class="form-select form-select-sm mb-1" aria-label="" v-model="soundFileName"
+                @change="soundFileChanged">
           <option v-for="file in soundLibrary.files" :value="file" :key="file">{{ file }}</option>
         </select>
         <!-- upload mp3 -->
@@ -139,8 +141,11 @@
         <div>
           <div class="text-white-50 me-3 mb-2">RSSI scale factor</div>
           <input class="form-control form-control-sm mb-2 d-inline-block" type="number" placeholder="Size in pixels"
-                 style="max-width: 80px" v-model="rssiScaleFactor"> <span class="text-muted small ms-3"> Average RSSI {{ averageRssi }}</span>
-          <div class="text-muted mt-1 font-monospace" style="font-size: 9px">ui size * (scale/10) * (average rssi/rssi)</div>
+                 style="max-width: 80px" v-model="rssiScaleFactor"> <span
+            class="text-muted small ms-3"> Average RSSI {{ averageRssi }}</span>
+          <div class="text-muted mt-1 font-monospace" style="font-size: 9px">ui size * (scale/10) * (average
+            rssi/rssi)
+          </div>
         </div>
         <hr>
 
@@ -203,10 +208,12 @@
         <!-- RSSI size for events -->
         <div>
           <span class="text-white-50 me-1">RSSI-based size</span>
-          <div class="form-check form-switch mb-1" v-for="rssiResizeEvent in rssiResizeEvents" :key="rssiResizeEvent.event">
+          <div class="form-check form-switch mb-1" v-for="rssiResizeEvent in rssiResizeEvents"
+               :key="rssiResizeEvent.event">
             <input class="form-check-input" type="checkbox" v-model="rssiResizeEvent.enabled"
                    :id="`rssi-event-size-checkbox-${rssiResizeEvent.event}`">
-            <label class="form-check-label" :for="`rssi-event-size-checkbox-${rssiResizeEvent.event}`" style="color: white">
+            <label class="form-check-label" :for="`rssi-event-size-checkbox-${rssiResizeEvent.event}`"
+                   style="color: white">
               {{ rssiResizeEvent.event }}
             </label>
           </div>
@@ -243,6 +250,9 @@
 
 <script setup>
 import {ref, onMounted, reactive, watch} from 'vue'
+
+// eslint-disable-next-line
+let appSettings = null
 
 const wavelets = ref(new Map())
 const id_map = ref(new Map())
@@ -420,6 +430,7 @@ function openFile(event) {
 
 
 const simulationMode = ref(false)
+
 function simulationSwitched() {
   if (simulationMode.value === true) {
     disconnect()
@@ -430,6 +441,7 @@ function simulationSwitched() {
     connect()
   }
 }
+
 function runSimulation() {
   if (simulationMode.value === false) {
     return false
@@ -439,6 +451,7 @@ function runSimulation() {
   process(message)
   setTimeout(runSimulation, Math.floor(Math.random() * 1000) + 1)
 }
+
 const connectionState = ref(true)
 const connectionStatus = ref('red')
 
@@ -520,17 +533,20 @@ const isColorWavelets = ref(false)
 
 
 import {soundLibrary} from "@/assets/js/helpers/sound";
+
 const isSoundOn = ref(false)
 const isSoundSimultaneous = ref(false)
 const soundFolderPath = 'static/sound/'
 const soundFileName = ref('bell-high.mp3')
 let soundFilePath = soundFolderPath + soundFileName.value
 let sound = new Audio(soundFilePath)
+
 // Update sound file if changed
 function soundFileChanged() {
   soundFilePath = soundFolderPath + soundFileName.value
   sound = new Audio(soundFilePath)
 }
+
 function uploadMp3(event) {
   let input = event.target;
   if (!input.files.length) return
@@ -700,6 +716,16 @@ function renderingTypeChanged(e) {
 
 //
 onMounted(() => {
+  // Get saved app settings
+  if (localStorage.getItem('appSettings')) {
+    appSettings = JSON.parse(localStorage.getItem('appSettings'))
+  }
+  if (appSettings) {
+    appSettings.basicSize ? basicSize.value = appSettings.basicSize : null
+    appSettings.diskSize ? diskSize.value = appSettings.diskSize : null
+    appSettings.rssiScaleFactor ? rssiScaleFactor.value = appSettings.rssiScaleFactor : null
+  }
+
   // Simulation / connect
   if (simulationMode.value === true) {
     connectionStatus.value = 'green'
@@ -717,6 +743,24 @@ onMounted(() => {
   canvas.appendChild(pixi.view)
   ticks()
 })
+
+// Saving settings
+watch([
+      basicSize,
+      diskSize,
+    ],
+    ([
+       basicSizeNew,
+       diskSizeNew,
+     ]) => {
+      if (!appSettings) {
+        appSettings = {}
+      }
+      appSettings.basicSize = basicSizeNew
+      appSettings.diskSize = diskSizeNew
+      appSettings.rssiScaleFactor = rssiScaleFactor
+      localStorage.setItem('appSettings', JSON.stringify(appSettings))
+    })
 </script>
 
 <style scoped lang="sass">
