@@ -30,6 +30,7 @@ export function parse(list) {
             const x = parseInt(splited[1])
             const y = parseInt(splited[2])
             const settings = {x: x, y: y}
+            settings.tag = tag
             // If wavelet size specified in csv
             const size = parseFloat(splited[3])
             if (size) {

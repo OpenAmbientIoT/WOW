@@ -5,17 +5,17 @@
     <!-- Canvas/webgl -->
     <div id="canvas-container"></div>
     <!-- SVG, GIF, VIDEO -->
-    <template v-if="selectedRenderingType != WEBGL">
+    <template v-if="selectedRenderingType !== WEBGL">
       <template v-for="[key, wavelet] in wavelets" :key="key">
-        <WaveletComponent v-if="selectedRenderingType == SVG" :wavelet="wavelet"/>
-        <GifWaveletComponent v-if="selectedRenderingType == GIF" :wavelet="wavelet"/>
+        <WaveletComponent v-if="selectedRenderingType === SVG" :wavelet="wavelet"/>
+        <GifWaveletComponent v-if="selectedRenderingType === GIF" :wavelet="wavelet"/>
       </template>
     </template>
 
 
     <!-- Grid mode enabled -->
     <template v-if="gridMode">
-      <template v-for="[key, map] in id_map" :key="key">
+      <template v-for="[key, map] in idsMap" :key="key">
         <GridWaveletComponent :size="basicSize" :map="map"/>
       </template>
 
@@ -28,7 +28,7 @@
     </template>
 
     <div class="ui-wrapper mb-3" :style="uiConfiguration.positions[uiPosition].style">
-      <div class="ui-container-toggle" :style="(id_map.size == 0 ? 'display: block !important; ' : '')">
+      <div class="ui-container-toggle" :style="(idsMap.size === 0 ? 'display: block !important; ' : '')">
 
         <!-- Connection status -->
         <div class="connection-status mb-3" :class="connectionStatus"
@@ -38,7 +38,7 @@
         <div class="mb-3">
           <label for="map-file-upload" class="form-label small"><span class="text-white-50">Upload map CSV</span>
             (<span
-                :style="id_map.size == 0 ? 'color: red' : 'color: green'"> {{ id_map.size }} ids loaded</span>)</label>
+                :style="idsMap.size === 0 ? 'color: red' : 'color: green'"> {{ idsMap.size }} ids loaded</span>)</label>
           <input class="form-control form-control-sm" id="map-file-upload" type="file" @change="openFile">
         </div>
         <hr>
@@ -249,13 +249,18 @@
 </template>
 
 <script setup>
-import {ref, onMounted, reactive, watch} from 'vue'
+import {ref, onMounted, reactive, watch, onBeforeMount} from 'vue'
 
-// eslint-disable-next-line
-let appSettings = null
+let appSettings = {}
+// Get saved app settings
+if (localStorage.getItem('appSettings')) {
+  appSettings = JSON.parse(localStorage.getItem('appSettings'))
+} else {
+  localStorage.setItem('appSettings', JSON.stringify(appSettings))
+}
 
 const wavelets = ref(new Map())
-const id_map = ref(new Map())
+const idsMap = ref(new Map())
 const rssi = ref(new Map())
 const rssiScaleFactor = ref(1)
 const temperatureDiskTimeout = ref(15)
@@ -265,7 +270,7 @@ const consoleEvents = ref(false)
 const consoleRenderingInfo = ref(false)
 const consoleLifetimeInfo = ref(false)
 const consoleFadingInfo = ref(false)
-const consoleSettings = [
+let consoleSettings = [
   {state: consoleEvents, name: 'Events'},
   {state: consoleRenderingInfo, name: 'Rendering'},
   {state: consoleLifetimeInfo, name: 'Lifetime'},
@@ -290,19 +295,22 @@ function disconnect() {
 import {eventsConfig, RSSI, TEMP_C} from "@/assets/js/classes/events/EventsConfig";
 import {renderingConfig, SVG, GIF, WEBGL} from "@/assets/js/classes/RenderingConfig";
 
-const eventsTypes = reactive(eventsConfig.eventsTypes)
+
+const renderingTypes = (appSettings.renderingTypes ? reactive(appSettings.renderingTypes) : reactive(renderingConfig.types))
+
+const rssiResizeEvents = (appSettings.rssiResizeEvents ? reactive(appSettings.rssiResizeEvents) : reactive(rssiConfig.resizeEvents))
+
+const eventsTypes = (appSettings.eventsTypes ? reactive(appSettings.eventsTypes) : reactive(eventsConfig.eventsTypes))
 // Watch event types list changed to clear RSSI from values
 watch(eventsTypes, (newEventsTypes) => {
   newEventsTypes.forEach((eventType) => {
     if (eventType.name == RSSI && !eventType.enabled) {
       rssi.value.clear()
-      averageRssi.value = 65
+      averageRssi.value = 70
     }
   })
 })
-const renderingTypes = reactive(renderingConfig.types)
 
-const rssiResizeEvents = reactive(rssiConfig.resizeEvents)
 
 import {rgbColor} from "@/assets/js/helpers/temperaturecolor"
 import {humanReadableTime} from "@/assets/js/helpers/time"
@@ -344,7 +352,7 @@ function process(message) {
 
       // Get element tagCsvData (csv data)
       if (consoleEvents.value) console.log(event)
-      const tagCsvData = id_map.value.get(event.tag)
+      const tagCsvData = idsMap.value.get(event.tag)
       if (tagCsvData) {
         // Create new wavelet element
         const wavelet = new WaveletElement();
@@ -420,7 +428,7 @@ function openFile(event) {
   let input = event.target;
   const reader = new FileReader();
   reader.onload = function () {
-    id_map.value = parse(reader.result)
+    idsMap.value = parse(reader.result)
     console.log('Uploaded CSV:');
     console.log(reader.result.substring(0, 200));
   };
@@ -537,7 +545,7 @@ import {soundLibrary} from "@/assets/js/helpers/sound";
 const isSoundOn = ref(false)
 const isSoundSimultaneous = ref(false)
 const soundFolderPath = 'static/sound/'
-const soundFileName = ref('bell-high.mp3')
+const soundFileName = ((appSettings.soundFileName && appSettings.soundFileName.includes('.mp3')) ? ref(appSettings.soundFileName) : ref('bell-high.mp3'))
 let soundFilePath = soundFolderPath + soundFileName.value
 let sound = new Audio(soundFilePath)
 
@@ -714,21 +722,39 @@ function renderingTypeChanged(e) {
   selectedRenderingType.value = selected
 }
 
-//
-onMounted(() => {
-  // Get saved app settings
-  if (localStorage.getItem('appSettings')) {
-    appSettings = JSON.parse(localStorage.getItem('appSettings'))
-  }
+onBeforeMount(() => {
   if (appSettings) {
+    appSettings.selectedRenderingType ? selectedRenderingType.value = appSettings.selectedRenderingType : null
     appSettings.basicSize ? basicSize.value = appSettings.basicSize : null
     appSettings.diskSize ? diskSize.value = appSettings.diskSize : null
     appSettings.rssiScaleFactor ? rssiScaleFactor.value = appSettings.rssiScaleFactor : null
     appSettings.temperatureDiskTimeout ? temperatureDiskTimeout.value = appSettings.temperatureDiskTimeout : null
     appSettings.minCelsius ? minCelsius.value = appSettings.minCelsius : null
     appSettings.maxCelsius ? maxCelsius.value = appSettings.maxCelsius : null
-  }
+    appSettings.simulationMode ? simulationMode.value = appSettings.simulationMode : null
+    appSettings.gridMode ? gridMode.value = appSettings.gridMode : null
+    appSettings.crosshairCursor ? crosshairCursor.value = appSettings.crosshairCursor : null
+    appSettings.isSoundOn ? isSoundOn.value = appSettings.isSoundOn : null
+    appSettings.isSoundSimultaneous ? isSoundSimultaneous.value = appSettings.isSoundSimultaneous : null
 
+    if (appSettings.idsMap && appSettings.idsMap.length) {
+      appSettings.idsMap.forEach((savedTagData) => {
+        idsMap.value.set(savedTagData.tag, savedTagData)
+      })
+    }
+
+    appSettings.debugMode ? debugMode.value = appSettings.debugMode : null
+
+    //
+    appSettings.consoleEvents ? consoleEvents.value = appSettings.consoleEvents : null
+    appSettings.consoleRenderingInfo ? consoleRenderingInfo.value = appSettings.consoleRenderingInfo : null
+    appSettings.consoleLifetimeInfo ? consoleLifetimeInfo.value = appSettings.consoleLifetimeInfo : null
+    appSettings.consoleFadingInfo ? consoleFadingInfo.value = appSettings.consoleFadingInfo : null
+  }
+})
+
+//
+onMounted(() => {
   // Simulation / connect
   if (simulationMode.value === true) {
     connectionStatus.value = 'green'
@@ -739,8 +765,6 @@ onMounted(() => {
   }
   // Remove expired wavelets
   inspectWavelets()
-  // Empty map
-  id_map.value = new Map()
   // Pixi / canvas / WebGL
   const canvas = document.getElementById('canvas-container')
   canvas.appendChild(pixi.view)
@@ -749,30 +773,89 @@ onMounted(() => {
 
 // Saving settings
 watch([
+      selectedRenderingType,
       basicSize,
       diskSize,
       rssiScaleFactor,
       temperatureDiskTimeout,
       minCelsius,
       maxCelsius,
+      idsMap,
+      simulationMode,
+      gridMode,
+      crosshairCursor,
+      isSoundOn,
+      isSoundSimultaneous,
+      soundFileName,
+      renderingTypes,
+      eventsTypes,
+      debugMode,
+      rssiResizeEvents,
+      consoleEvents,
+      consoleRenderingInfo,
+      consoleLifetimeInfo,
+      consoleFadingInfo,
     ],
     ([
+       selectedRenderingTypeNew,
        basicSizeNew,
        diskSizeNew,
        rssiScaleFactorNew,
        temperatureDiskTimeoutNew,
        minCelsiusNew,
        maxCelsiusNew,
+       idsMapNew,
+       simulationModeNew,
+       gridModeNew,
+       crosshairCursorNew,
+       isSoundOnNew,
+       isSoundSimultaneousNew,
+       soundFileNameNew,
+       renderingTypesNew,
+       eventsTypesNew,
+       debugModeNew,
+       rssiResizeEventsNew,
+       consoleEventsNew,
+       consoleRenderingInfoNew,
+       consoleLifetimeInfoNew,
+       consoleFadingInfoNew,
      ]) => {
       if (!appSettings) {
         appSettings = {}
       }
+      appSettings.selectedRenderingType = selectedRenderingTypeNew
       appSettings.basicSize = basicSizeNew
       appSettings.diskSize = diskSizeNew
       appSettings.rssiScaleFactor = rssiScaleFactorNew
       appSettings.temperatureDiskTimeout = temperatureDiskTimeoutNew
       appSettings.minCelsius = minCelsiusNew
       appSettings.maxCelsius = maxCelsiusNew
+      appSettings.simulationMode = simulationModeNew
+      appSettings.gridMode = gridModeNew
+      appSettings.crosshairCursor = crosshairCursorNew
+      appSettings.isSoundOn = isSoundOnNew
+      appSettings.isSoundSimultaneous = isSoundSimultaneousNew
+      if (soundFileNameNew.includes('.mp3')) {
+        appSettings.soundFileName = soundFileNameNew
+      }
+
+      if (idsMapNew.size) {
+        const uploadedMap = [...idsMapNew.values()]
+        if (uploadedMap.length) {
+          appSettings.idsMap = uploadedMap
+        }
+      }
+
+      appSettings.renderingTypes = renderingTypesNew
+      appSettings.eventsTypes = eventsTypesNew
+      appSettings.debugMode = debugModeNew
+      appSettings.rssiResizeEvents = rssiResizeEventsNew
+
+      appSettings.consoleEvents = consoleEventsNew
+      appSettings.consoleRenderingInfo = consoleRenderingInfoNew
+      appSettings.consoleLifetimeInfo = consoleLifetimeInfoNew
+      appSettings.consoleFadingInfo = consoleFadingInfoNew
+
       localStorage.setItem('appSettings', JSON.stringify(appSettings))
     })
 </script>
