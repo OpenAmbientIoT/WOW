@@ -1,4 +1,5 @@
 import {trim} from "@/assets/js/helpers/trim"
+import {ACTV} from "@/assets/js/classes/events/EventsConfig";
 
 export default class EventsBuilder {
     constructor() {
@@ -24,22 +25,26 @@ export default class EventsBuilder {
 
             if (isEventEnabled) {
                 const event = {}
-                message_pieces.forEach(msg => {
-                    if (msg.includes('tagId')) {
-                        event.tag = msg.replace('tagId=', '')
+                message_pieces.forEach(msg_piece => {
+                    if (msg_piece.includes('tagId')) {
+                        event.tag = msg_piece.replace('tagId=', '')
                     }
                     // TEMP_C, DBUG, ACTV, ...
-                    if (msg.includes('eventName')) {
-                        event.name = msg.replace('eventName=', '')
+                    if (msg_piece.includes('eventName')) {
+                        event.name = msg_piece.replace('eventName=', '')
                     }
-                    if (msg.includes('eventValue')) {
-                        event.value = Number.parseFloat(msg.replace('eventValue=', '')).toFixed(1)
-                        event.raw = msg.replace('eventValue=', '')
+                    if (msg_piece.includes('eventValue')) {
+                        event.value = Number.parseFloat(msg_piece.replace('eventValue=', '')).toFixed(1)
+                        event.raw = msg_piece.replace('eventValue=', '')
                     }
-                    if (msg.includes('timestamp')) {
-                        event.timestamp = parseInt(msg.replace('timestamp=', ''))
+                    if (msg_piece.includes('timestamp')) {
+                        event.timestamp = parseInt(msg_piece.replace('timestamp=', ''))
                     }
                 })
+                // Skip ACTV with 0 values
+                if (event.name === ACTV && (parseInt(event.value) === 0)) {
+                    return  null
+                }
                 return event
             }
         }

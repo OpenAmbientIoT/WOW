@@ -51,6 +51,11 @@
             Enable simulation ▹
           </label>
         </div>
+        <div>
+        <div class="text-white-50 me-3 mb-2">Average events per second</div>
+        <input class="form-control form-control-sm mb-2" type="number" placeholder="Amount"
+               style="max-width: 80px" v-model="simulatedAverageEventsPerSecond">
+        </div>
         <hr>
 
         <!--Grid look switch-->
@@ -414,10 +419,8 @@ function process(message) {
         // Console
         if (consoleRenderingInfo.value) console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is not in map!')
       }
-
-
     } else {
-      if (consoleEvents.value) console.log('Skip message "' + message + '" (can\'t parse)')
+      if (consoleEvents.value) console.log('Skip message "' + message + '" (disabled or can\'t parse)')
     }
   }
 }
@@ -450,6 +453,7 @@ function simulationSwitched() {
   }
 }
 
+const simulatedAverageEventsPerSecond = ref(1)
 function runSimulation() {
   if (simulationMode.value === false) {
     return false
@@ -457,7 +461,8 @@ function runSimulation() {
   connectionState.value = !connectionState.value
   const message = generateMessage()
   process(message)
-  setTimeout(runSimulation, Math.floor(Math.random() * 1000) + 1)
+  const divider = simulatedAverageEventsPerSecond.value > 0 ? simulatedAverageEventsPerSecond.value : 1
+  setTimeout(runSimulation, 1000 / divider)
 }
 
 const connectionState = ref(true)
@@ -468,6 +473,7 @@ function renderConnection(status) {
   connectionStatus.value = status
 }
 
+import {ACTV} from "@/assets/js/classes/events/EventsConfig"
 function generateMessage() {
   //events,tagId=(01)00850027865010(21)00oeT4035,eventName=TEMP_C,eventValue=15.53504436835706,timestamp=1655924635
   const min = 4000
@@ -475,9 +481,12 @@ function generateMessage() {
   const min_t = 15
   const max_t = 27
   const tag = '(01)00850027865010(21)00oeT' + (Math.floor(Math.random() * (max - min) + min)).toString()
-  const value = (Math.random() * (max_t - min_t) + min_t).toFixed(4)
+  let value = (Math.random() * (max_t - min_t) + min_t).toFixed(4)
   // Get random event type from the list
   const eventsType = eventsTypes[Math.floor(Math.random() * eventsTypes.length)];
+  if (eventsType.name === ACTV) {
+    value = Math.round((Math.random()))
+  }
   let message = 'events,tagId=' + tag + ',eventName=' + eventsType.name + ',eventValue=' + value + ',timestamp=' + Date.now()
   return message
 }
@@ -489,9 +498,9 @@ function inspectWavelets() {
     const ringsLifetime = lifetime
 
     // Extend temperature wavelets lifetime (based on specified color disc time)
-    if (wavelet.event.name == TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name == TEMP_C)) {
+    if (wavelet.event.name === TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C)) {
       const temperatureWaveletLifetime = temperatureDiskTimeout.value
-      lifetime = lifetime < temperatureWaveletLifetime ? (lifetime + temperatureWaveletLifetime - lifetime) : (lifetime)
+      lifetime = lifetime < temperatureWaveletLifetime ? temperatureWaveletLifetime : lifetime
     }
 
     const milliseconds = now - wavelet.created
@@ -505,7 +514,7 @@ function inspectWavelets() {
 
 
     // Fadeout wavelet rings for temperature events earlier than fadeout whole wavelet
-    if (wavelet.event.name == TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name == TEMP_C)) {
+    if (wavelet.event.name === TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C)) {
       if (seconds >= ringsLifetime - 1 && !wavelet.options.ringsFadeout) {
         // Fadeout rings
         if (consoleFadingInfo.value) console.log('Time to fadeout rings for #' + wavelet.event.tag)
@@ -526,7 +535,7 @@ function inspectWavelets() {
 
       // Remove from Canvas
       container.children.forEach((waveletContainer) => {
-        if (wavelet.event.tag == waveletContainer.wavelet.event.tag) {
+        if (wavelet.event.tag === waveletContainer.wavelet.event.tag) {
           container.removeChild(waveletContainer)
         }
       })
