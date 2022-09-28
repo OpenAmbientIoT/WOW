@@ -1,6 +1,8 @@
 <template>
   <div class="wavelet-gr wavelet-gr_eternal" :style="('left:' + (map.x - size/2) + 'px; top:' + (map.y - size/2) + 'px;')
-        + ('width: ' + size + 'px;' + 'height: ' + size + 'px;')"></div>
+        + ('width: ' + size + 'px;' + 'height: ' + size + 'px;')">
+    <div class="wavelet-gr__value" :style="`font-size: ${size/10 < 6 ? 6 : size/10}px;`">{{ map.tag.slice(-4) }}</div>
+  </div>
 
 </template>
 
@@ -60,7 +62,7 @@ const props = defineProps({
     left: 50%
     transform: translateX(-50%)
     top: 10%
-    font-weight: 900
+    font-weight: 500
     padding: 0 4px
     text-align: center
     border-radius: 6px
