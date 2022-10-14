@@ -1,9 +1,15 @@
 <template>
-  <div class="display" v-on:mousemove="updateCoordinates"
+  <div :class="'display' + (backgroundEnabled && !backgroundVideo ? ' display_bg display_bg-img' : '')" v-on:mousemove="updateCoordinates"
        :style="(gridMode && crosshairCursor ? 'cursor: crosshair;' : '') + (gridMode ? 'box-shadow: inset 0 0 0 2px wheat;' : '')">
+
+<!--    Video BG -->
+    <video v-if="backgroundEnabled && backgroundVideo" autoplay muted loop id="video">
+      <source src="/static/backgrounds/video.mp4" type="video/mp4">
+    </video>
+
     <!-- Wavelets to display -->
     <!-- Canvas/webgl -->
-    <div id="canvas-container"></div>
+    <div v-if="selectedRenderingType === WEBGL" id="canvas-container"></div>
     <!-- SVG, GIF, VIDEO -->
     <template v-if="selectedRenderingType !== WEBGL">
       <template v-for="[key, wavelet] in wavelets" :key="key">
@@ -70,6 +76,20 @@
           <input class="form-check-input" type="checkbox" v-model="crosshairCursor" id="crosshair-checkbox">
           <label class="form-check-label" for="crosshair-checkbox" style="color: white">
             Crosshair cursor
+          </label>
+        </div>
+        <hr>
+        <!-- Background -->
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" v-model="backgroundEnabled" id="background-enable-checkbox">
+          <label class="form-check-label" for="background-enable-checkbox" style="color: white">
+            Enable background
+          </label>
+        </div>
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" v-model="backgroundVideo" id="background-video-checkbox">
+          <label class="form-check-label" for="background-video-checkbox" style="color: white">
+            Use video
           </label>
         </div>
         <hr>
@@ -269,6 +289,9 @@ const idsMap = ref(new Map())
 const rssi = ref(new Map())
 const rssiScaleFactor = ref(1)
 const temperatureDiskTimeout = ref(15)
+
+const backgroundEnabled = ref(false)
+const backgroundVideo = ref(false)
 
 const gridMode = ref(false)
 const consoleEvents = ref(false)
@@ -881,6 +904,12 @@ body
   bottom: 0
   background-color: #000
   overflow: hidden
+  &_bg
+    background-size: cover
+    background-position: center
+    background-color: transparent
+  &_bg-img
+    background-image: url(@/static/backgrounds/me.jpg)
 
 .ui-wrapper
   position: absolute
@@ -932,4 +961,11 @@ hr
 #canvas-container
   width: 100vw
   height: 100vh
+
+#video
+  position: fixed
+  right: 0
+  bottom: 0
+  min-width: 100%
+  min-height: 100%
 </style>

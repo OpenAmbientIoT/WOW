@@ -10,7 +10,7 @@ export const renderingConfig = {
         },
         {
             name: WEBGL,
-            description: 'transp, higher perf, β',
+            description: 'dsbld, transp, higher perf, β',
             enabled: false,
         },
         {
