@@ -1,16 +1,19 @@
 <template>
-  <div :class="'display' + (backgroundEnabled && !backgroundVideo ? ' display_bg display_bg-img' : '')" v-on:mousemove="updateCoordinates"
-       :style="(gridMode && crosshairCursor ? 'cursor: crosshair;' : '') + (gridMode ? 'box-shadow: inset 0 0 0 2px wheat;' : '')">
+  <div :class="'display' + (backgroundImageEnabled ? ' display_bg' : '')"
+       v-on:mousemove="updateCoordinates"
+       :style="(gridMode && crosshairCursor ? 'cursor: crosshair;' : '') +
+       (gridMode ? 'box-shadow: inset 0 0 0 2px wheat;' : '') +
+       (backgroundImageEnabled && backgroundImage ? 'background-image: url(' + backgroundImage + ')' : '')">
 
-<!--    Video BG -->
-    <video v-if="backgroundEnabled && backgroundVideo" autoplay muted loop id="video">
-      <source src="@/static/backgrounds/video.mp4" type="video/mp4">
+    <!-- Video background container -->
+    <video v-if="backgroundVideoEnabled && backgroundVideo" autoplay muted loop id="video">
+      <source :src="backgroundVideo" type="video/mp4">
     </video>
 
     <!-- Wavelets to display -->
     <!-- Canvas/webgl -->
     <div v-if="selectedRenderingType === WEBGL" id="canvas-container"></div>
-    <!-- SVG, GIF, VIDEO -->
+    <!-- SVG, GIF -->
     <template v-if="selectedRenderingType !== WEBGL">
       <template v-for="[key, wavelet] in wavelets" :key="key">
         <WaveletComponent v-if="selectedRenderingType === SVG" :wavelet="wavelet"/>
@@ -50,47 +53,75 @@
         <hr>
 
         <!--Simulate wavelets switch-->
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" v-model="simulationMode" id="sim-checkbox"
-                 @change="simulationSwitched">
-          <label class="form-check-label" for="sim-checkbox" style="color: white">
-            Enable simulation ▹
-          </label>
-        </div>
         <div>
-        <div class="text-white-50 me-3 mb-2">Average events per second</div>
-        <input class="form-control form-control-sm mb-2" type="number" placeholder="Amount"
-               style="max-width: 80px" v-model="simulatedAverageEventsPerSecond">
+          <div class="text-white-50 me-3 mb-2">Simulation</div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" v-model="simulationMode" id="sim-checkbox"
+                   @change="simulationSwitched">
+            <label class="form-check-label" for="sim-checkbox" style="color: white">
+              Enable
+            </label>
+          </div>
+          <div>
+            <div class="text-white-50 me-3 mb-2 small">Events per second</div>
+            <input class="form-control form-control-sm mb-2" type="number" placeholder="Set amount"
+                   style="max-width: 110px" v-model="simulatedAverageEventsPerSecond">
+          </div>
         </div>
         <hr>
 
         <!--Grid look switch-->
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" v-model="gridMode" id="grid-checkbox">
-          <label class="form-check-label" for="grid-checkbox" style="color: white">
-            Grid mode ܍
-          </label>
-        </div>
-        <!-- Crosshair cursor switch        -->
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" v-model="crosshairCursor" id="crosshair-checkbox">
-          <label class="form-check-label" for="crosshair-checkbox" style="color: white">
-            Crosshair cursor
-          </label>
+        <div>
+          <div class="text-white-50 me-3 mb-2">Grid</div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" v-model="gridMode" id="grid-checkbox">
+            <label class="form-check-label" for="grid-checkbox" style="color: white">
+              Enable
+            </label>
+          </div>
+          <!-- Crosshair cursor switch        -->
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" v-model="crosshairCursor" id="crosshair-checkbox">
+            <label class="form-check-label" for="crosshair-checkbox" style="color: white">
+              Crosshair cursor
+            </label>
+          </div>
         </div>
         <hr>
+
         <!-- Background -->
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" v-model="backgroundEnabled" id="background-enable-checkbox">
-          <label class="form-check-label" for="background-enable-checkbox" style="color: white">
-            Enable background
-          </label>
-        </div>
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" v-model="backgroundVideo" id="background-video-checkbox">
-          <label class="form-check-label" for="background-video-checkbox" style="color: white">
-            Use video
-          </label>
+        <div>
+          <div class="text-white-50 me-3 mb-2">Background</div>
+          <!-- Background image -->
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" v-model="backgroundImageEnabled"
+                   id="background-image-enable-checkbox">
+            <label class="form-check-label" for="background-image-enable-checkbox" style="color: white">
+              Image
+            </label>
+          </div>
+          <!-- Upload image -->
+          <div v-if="backgroundImageEnabled" class="mb-3">
+            <label for="background-image-upload" class="form-label small"><span
+                class="text-white-50">Upload image</span></label>
+            <input class="form-control form-control-sm" id="background-image-upload" type="file"
+                   @change="uploadBackgroundImage">
+          </div>
+          <!-- Background video -->
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" v-model="backgroundVideoEnabled"
+                   id="background-video-enable-checkbox">
+            <label class="form-check-label" for="background-video-enable-checkbox" style="color: white">
+              Video
+            </label>
+          </div>
+          <!-- Upload video -->
+          <div v-if="backgroundVideoEnabled" class="mb-3">
+            <label for="background-video-upload" class="form-label small"><span
+                class="text-white-50">Upload video</span></label>
+            <input class="form-control form-control-sm" id="background-video-upload" type="file"
+                   @change="uploadBackgroundVideo">
+          </div>
         </div>
         <hr>
 
@@ -104,29 +135,32 @@
         <hr class="d-none">
 
         <!--Play sound-->
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" v-model="isSoundOn" id="sound-on-checkbox">
-          <label class="form-check-label" for="sound-on-checkbox" style="color: white">
-            Sound 🔉
-          </label>
-        </div>
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" v-model="isSoundSimultaneous"
-                 id="sound-simultaneous-checkbox">
-          <label class="form-check-label" for="sound-simultaneous-checkbox" style="color: white">
-            Play simultaneous
-          </label>
-        </div>
-        <!-- specify mp3 -->
-        <div class="text-white-50 small mb-2">Select mp3</div>
-        <select class="form-select form-select-sm mb-1" aria-label="" v-model="soundFileName"
-                @change="soundFileChanged">
-          <option v-for="file in soundLibrary.files" :value="file" :key="file">{{ file }}</option>
-        </select>
-        <!-- upload mp3 -->
-        <div class="mb-3">
-          <label for="mp3-upload" class="form-label small"><span class="text-white-50">Or upload mp3</span></label>
-          <input class="form-control form-control-sm" id="mp3-upload" type="file" @change="uploadMp3">
+        <div>
+          <div class="text-white-50 me-3 mb-2">Sound</div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" v-model="isSoundOn" id="sound-on-checkbox">
+            <label class="form-check-label" for="sound-on-checkbox" style="color: white">
+              Enable 🔉
+            </label>
+          </div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" v-model="isSoundSimultaneous"
+                   id="sound-simultaneous-checkbox">
+            <label class="form-check-label" for="sound-simultaneous-checkbox" style="color: white">
+              Play simultaneous
+            </label>
+          </div>
+          <!-- specify mp3 -->
+          <div class="text-white-50 small mb-2">Select mp3</div>
+          <select class="form-select form-select-sm mb-1" aria-label="" v-model="soundFileName"
+                  @change="soundFileChanged">
+            <option v-for="file in soundLibrary.files" :value="file" :key="file">{{ file }}</option>
+          </select>
+          <!-- upload mp3 -->
+          <div class="mb-3">
+            <label for="mp3-upload" class="form-label small"><span class="text-white-50">Or upload mp3</span></label>
+            <input class="form-control form-control-sm" id="mp3-upload" type="file" @change="uploadMp3">
+          </div>
         </div>
         <hr>
 
@@ -290,8 +324,10 @@ const rssi = ref(new Map())
 const rssiScaleFactor = ref(1)
 const temperatureDiskTimeout = ref(15)
 
-const backgroundEnabled = ref(false)
-const backgroundVideo = ref(false)
+import useBackgrounds from "@/assets/js/hooks/useBackgrounds";
+// eslint-disable-next-line
+const { backgroundImageEnabled, backgroundImage, uploadBackgroundImage, backgroundVideoEnabled, backgroundVideo, uploadBackgroundVideo } = useBackgrounds()
+
 
 const gridMode = ref(false)
 const consoleEvents = ref(false)
@@ -908,8 +944,6 @@ body
     background-size: cover
     background-position: center
     background-color: transparent
-  &_bg-img
-    background-image: url(@/static/backgrounds/me.jpg)
 
 .ui-wrapper
   position: absolute
