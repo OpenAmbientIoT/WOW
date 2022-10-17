@@ -4,7 +4,7 @@
 
 <!--    Video BG -->
     <video v-if="backgroundEnabled && backgroundVideo" autoplay muted loop id="video">
-      <source src="/static/backgrounds/video.mp4" type="video/mp4">
+      <source src="@/static/backgrounds/video.mp4" type="video/mp4">
     </video>
 
     <!-- Wavelets to display -->
@@ -963,9 +963,8 @@ hr
   height: 100vh
 
 #video
-  position: fixed
-  right: 0
-  bottom: 0
-  min-width: 100%
-  min-height: 100%
+  position: absolute
+  width: 100vw
+  height: 100vh
+  object-fit: cover
 </style>
