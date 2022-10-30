@@ -1,5 +1,5 @@
 
-export default class MqttEvent {
+export default class XMqttEvent {
     constructor() {
         this.tag = ''
         this.name = ''

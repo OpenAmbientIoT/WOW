@@ -10,8 +10,7 @@
        :style="('left:' + (wavelet.predecessor.x - wavelet.predecessor.diskSize*1/2) + 'px; top:' + (wavelet.predecessor.y - wavelet.predecessor.diskSize*1/2) + 'px;')
            + ('width: ' + wavelet.predecessor.diskSize*1 + 'px;' + 'height: ' + wavelet.predecessor.diskSize*1 + 'px;') + ('background-color:' + wavelet.predecessor.color + ';') +
            ('-webkit-filter: blur(' + wavelet.predecessor.diskSize/5 + 'px)')"></div>
-
-  <div :class="'wavelet' + (wavelet.options.fadein ? ' wavelet_fadein' : '' )
+  <div :class="'wavelet wavelet_packet' + (wavelet.options.fadein ? ' wavelet_fadein' : '' )
     + (wavelet.options.fadeout ? ' wavelet_fadeout' : '' )
     + (wavelet.options.ringsFadeout ? ' wavelet_fadeout' : '' )"
        :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
@@ -33,7 +32,10 @@
 import {defineProps} from "vue"
 import WaveletElement from "@/assets/js/classes/WaveletElement"
 import {TEMP_C} from "@/assets/js/classes/events/EventsConfig"
-defineProps({
+// eslint-disable-next-line
+import {generate} from "@/assets/js/helpers/id";
+// eslint-disable-next-line
+const props = defineProps({
   wavelet: WaveletElement,
 })
 </script>

@@ -16,7 +16,7 @@
     <!-- SVG, GIF -->
     <template v-if="selectedRenderingType !== WEBGL">
       <template v-for="[key, wavelet] in wavelets" :key="key">
-        <WaveletComponent v-if="selectedRenderingType === SVG" :wavelet="wavelet"/>
+        <SvgWaveletComponent v-if="selectedRenderingType === SVG" :wavelet="wavelet"/>
         <GifWaveletComponent v-if="selectedRenderingType === GIF" :wavelet="wavelet"/>
       </template>
     </template>
@@ -356,7 +356,7 @@ function disconnect() {
 }
 
 
-import {eventsConfig, RSSI, TEMP_C} from "@/assets/js/classes/events/EventsConfig";
+import {eventsConfig, PACKET, RSSI, TEMP_C} from "@/assets/js/classes/events/EventsConfig";
 import {renderingConfig, SVG, GIF, WEBGL} from "@/assets/js/classes/RenderingConfig";
 
 
@@ -364,7 +364,14 @@ const renderingTypes = (appSettings.renderingTypes ? reactive(appSettings.render
 
 const rssiResizeEvents = (appSettings.rssiResizeEvents ? reactive(appSettings.rssiResizeEvents) : reactive(rssiConfig.resizeEvents))
 
-const eventsTypes = (appSettings.eventsTypes ? reactive(appSettings.eventsTypes) : reactive(eventsConfig.eventsTypes))
+// Event types
+let eventsTypes = reactive(appSettings.eventsTypes)
+if (appSettings.eventsTypes) {
+  if (appSettings.eventsTypes.length != eventsConfig.eventsTypes.length) {
+    eventsTypes = reactive(eventsConfig.eventsTypes)
+  }
+}
+
 // Watch event types list changed to clear RSSI from values
 watch(eventsTypes, (newEventsTypes) => {
   newEventsTypes.forEach((eventType) => {
@@ -378,7 +385,7 @@ watch(eventsTypes, (newEventsTypes) => {
 
 import {rgbColor} from "@/assets/js/helpers/temperaturecolor"
 import {humanReadableTime} from "@/assets/js/helpers/time"
-import WaveletComponent from "@/components/WaveletComponent"
+import SvgWaveletComponent from "@/components/SvgWaveletComponent"
 import GridWaveletComponent from "@/components/GridWaveletComponent"
 import GifWaveletComponent from "@/components/GifWaveletComponent"
 import EventsBuilder from "@/assets/js/classes/EventsBuilder"
@@ -389,6 +396,8 @@ const maxCelsius = ref(30)
 const averageRssi = ref(70)
 //let lastRssiCalculation = 0
 
+
+import {toSize, rssiConfig, isRssiSizeForEventEnabled} from "@/assets/js/helpers/rssi";
 
 // Parse event message, create wavelet element, inject necessary data into wavelet
 function process(message) {
@@ -472,7 +481,7 @@ function process(message) {
 
         // Canvas Case
         if (selectedRenderingType.value === WEBGL) {
-          drawWavelet(wavelet)
+          drawWavelet(wavelet, basicSize)
         }
       } else {
         // Console
@@ -554,7 +563,18 @@ function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
     let lifetime = 10 // seconds
-    const ringsLifetime = lifetime
+    let lifetimePacket = 1.2 // seconds for PACKET events
+    let ringsFadeoutTime = 1
+    let waveletFadeoutTime = 1
+    let ringsLifetime = lifetime
+
+    // Special case for PACKET events
+    if (wavelet.event.name === PACKET) {
+      lifetime = lifetimePacket
+      ringsLifetime = lifetimePacket
+      ringsFadeoutTime = .1
+      waveletFadeoutTime = .1
+    }
 
     // Extend temperature wavelets lifetime (based on specified color disc time)
     if (wavelet.event.name === TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C)) {
@@ -563,36 +583,35 @@ function inspectWavelets() {
     }
 
     const milliseconds = now - wavelet.created
-    const seconds = Math.floor(milliseconds / 1000)
+    const passedSeconds = Math.floor(milliseconds / 1000)
 
+    // Fadein
     if (!wavelet.options.fadein) {
-      // Fadein
       if (consoleFadingInfo.value) console.log('Time to fadein for #' + wavelet.event.tag)
       wavelet.options.fadein = true
     }
 
-
-    // Fadeout wavelet rings for temperature events earlier than fadeout whole wavelet
+    // Start fadeout for wavelet rings for temperature events earlier than fadeout whole wavelet
     if (wavelet.event.name === TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C)) {
-      if (seconds >= ringsLifetime - 1 && !wavelet.options.ringsFadeout) {
+      if (passedSeconds >= ringsLifetime - ringsFadeoutTime && !wavelet.options.ringsFadeout) {
         // Fadeout rings
         if (consoleFadingInfo.value) console.log('Time to fadeout rings for #' + wavelet.event.tag)
         wavelet.options.ringsFadeout = true
       }
     }
 
-    if (seconds >= lifetime - 1 && !wavelet.options.fadeout) {
-      // Fadeout
+    // Start fadeout for whole wavelet
+    if (passedSeconds >= lifetime - waveletFadeoutTime && !wavelet.options.fadeout) {
       if (consoleFadingInfo.value) console.log('Time to fadeout for #' + wavelet.event.tag)
       wavelet.options.fadeout = true
     }
 
-    if (seconds >= lifetime) {
-      // Time to remove
+    // Time to remove whole wavelet
+    if (passedSeconds >= lifetime) {
       if (consoleLifetimeInfo.value) console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.event.tag + ' – removing')
       wavelets.value.delete(wavelet.event.tag)
 
-      // Remove from Canvas
+      // Remove from Canvas (PIXI)
       container.children.forEach((waveletContainer) => {
         if (wavelet.event.tag === waveletContainer.wavelet.event.tag) {
           container.removeChild(waveletContainer)
@@ -667,119 +686,11 @@ const uiConfiguration = reactive({
 })
 
 
-// Pixi / Canvas/ WebGL 2
-// eslint-disable-next-line
-import * as PIXI from 'pixi.js'
-import {toSize, rssiConfig, isRssiSizeForEventEnabled} from "@/assets/js/helpers/rssi";
-
-const pixi = new PIXI.Application({
-  width: window.innerWidth,
-  height: window.innerHeight,
-  antialias: true,
-  backgroundAlpha: true,
-  //autoDensity: true,
-  //backgroundColor: '0x000000',
-})
-
-// Common rendering container
-const container = new PIXI.Container();
-container.x = 0;
-container.y = 0;
-container.width = window.innerWidth
-container.height = window.innerHeight
-container.pivot.x = 0;
-container.pivot.y = 0;
-pixi.stage.addChild(container);
-
-// eslint-disable-next-line
-//const texture = PIXI.Texture.from("static/img/logo128.png")
-
-function ticks() {
-  // Listen for animate update
-  pixi.ticker.add(() => { //delta
-
-    if (selectedRenderingType.value == WEBGL) {
-      // eslint-disable-next-line
-      container.children.forEach((waveletContainer) => {
-        //waveletContainer.alpha > .8 ? waveletContainer.alpha -= .01 : null
-        if (waveletContainer.wavelet.options.fadein) {
-          waveletContainer.alpha < 1 ? waveletContainer.alpha += .03 : null
-        }
-        if (waveletContainer.wavelet.options.fadeout) {
-          waveletContainer.alpha > 0 ? waveletContainer.alpha -= .03 : null
-        }
-        // Calculate circles
-        // eslint-disable-next-line
-        waveletContainer.children.forEach((circle) => {
-          // Fadein circle
-          if (circle.scale.x < 0.3) {
-            circle.alpha < 1 ? circle.alpha += .02 : null
-          }
-          // Fadeout circle
-          if (circle.scale.x > 0.8) {
-            circle.alpha -= .01
-          }
-          // Scale circle
-          circle.scale.x < 1 ? circle.scale.set(circle.scale.x + .025, circle.scale.y + .025) : null
-        })
-      })
-    }
-
-  });
-}
-
-/**
- *
- * @param wavelet WaveletElement
- */
-function drawWavelet(wavelet) {
-  // Create wavelet container
-  const waveletContainer = new PIXI.Container()
-  waveletContainer.width = basicSize.value
-  waveletContainer.height = basicSize.value
-  waveletContainer.x = wavelet.x
-  waveletContainer.y = wavelet.y
-  waveletContainer.pivot.x = waveletContainer.width / 2
-  waveletContainer.pivot.y = waveletContainer.height / 2
-  // Attach wavelet obj
-  waveletContainer.wavelet = wavelet
-  waveletContainer.alpha = 0
-  //waveletContainer.toGlobal(new PIXI.Point(0,0))
-
-  //const sprite = new PIXI.Sprite(texture)
-  //sprite.width = basicSize.value
-  //sprite.height = basicSize.value
-  //waveletContainer.addChild(sprite)
-
-  // Wavelet inner circles
-  // #1
-  let circle = new PIXI.Graphics();
-  circle.lineStyle(3, 0xffffff, 1)
-  //circle.beginFill(0xDBE5DC);
-  circle.drawCircle(0, 0, basicSize.value * 0.1)
-  //circle.endFill()
-  //circle.maxSegments = 12
-  //circle.maxLength = 5
-  //circle.adaptive = true
-  //circle.nativeLines = true
-  circle.pivot.x = waveletContainer.width / 2
-  circle.pivot.y = waveletContainer.height / 2
-  circle.position.set(waveletContainer.width / 2, waveletContainer.height / 2)
-  //circle.toGlobal(new PIXI.Point(0,0))
-  circle.scale.set(.1, .1)
-  waveletContainer.addChild(circle)
-
-
-  // Todo Add value and shine if temperature
-
-
-  container.addChild(waveletContainer)
-}
+import {pixi, container, ticks, drawWavelet} from "@/assets/js/hooks/usePixi";
 
 
 // Rendering type
 const selectedRenderingType = ref(SVG)
-
 function renderingTypeChanged(e) {
   const selected = e.target.value
   renderingTypes.forEach((type) => {
@@ -833,10 +744,13 @@ onMounted(() => {
   }
   // Remove expired wavelets
   inspectWavelets()
+
   // Pixi / canvas / WebGL
   const canvas = document.getElementById('canvas-container')
-  canvas.appendChild(pixi.view)
-  ticks()
+  if (canvas) {
+    canvas.appendChild(pixi.view)
+    ticks(selectedRenderingType)
+  }
 })
 
 // Saving settings

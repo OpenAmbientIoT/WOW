@@ -1,3 +1,4 @@
+export const PACKET = 'PACKET'
 export const TEMP_C = 'TEMP_C'
 export const DBUG = 'DBUG'
 export const ACTV = 'ACTV'
@@ -6,6 +7,10 @@ export const GEOLOC = 'GEOLOC'
 export const RSSI = 'RSSI'
 export const eventsConfig = {
     eventsTypes: [
+        {
+            name: PACKET,
+            enabled: true,
+        },
         {
             name: TEMP_C,
             enabled: true,
