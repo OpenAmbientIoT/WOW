@@ -522,12 +522,15 @@ function simulationSwitched() {
 }
 
 const simulatedAverageEventsPerSecond = ref(1)
+import useSimulation from "@/assets/js/hooks/useSimulation";
+const { generateMessage } = useSimulation()
+
 function runSimulation() {
   if (simulationMode.value === false) {
     return false
   }
   connectionState.value = !connectionState.value
-  const message = generateMessage()
+  const message = generateMessage(eventsTypes)
   process(message)
   const divider = simulatedAverageEventsPerSecond.value > 0 ? simulatedAverageEventsPerSecond.value : 1
   setTimeout(runSimulation, 1000 / divider)
@@ -541,29 +544,12 @@ function renderConnection(status) {
   connectionStatus.value = status
 }
 
-import {ACTV} from "@/assets/js/classes/events/EventsConfig"
-function generateMessage() {
-  //events,tagId=(01)00850027865010(21)00oeT4035,eventName=TEMP_C,eventValue=15.53504436835706,timestamp=1655924635
-  const min = 4000
-  const max = 5026
-  const min_t = 15
-  const max_t = 27
-  const tag = '(01)00850027865010(21)00oeT' + (Math.floor(Math.random() * (max - min) + min)).toString()
-  let value = (Math.random() * (max_t - min_t) + min_t).toFixed(4)
-  // Get random event type from the list
-  const eventsType = eventsTypes[Math.floor(Math.random() * eventsTypes.length)];
-  if (eventsType.name === ACTV) {
-    value = Math.round((Math.random()))
-  }
-  let message = 'events,tagId=' + tag + ',eventName=' + eventsType.name + ',eventValue=' + value + ',timestamp=' + Date.now()
-  return message
-}
 
 function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
     let lifetime = 10 // seconds
-    let lifetimePacket = 1.2 // seconds for PACKET events
+    let lifetimePacket = .2 // seconds for PACKET events
     let ringsFadeoutTime = 1
     let waveletFadeoutTime = 1
     let ringsLifetime = lifetime
@@ -620,7 +606,7 @@ function inspectWavelets() {
     }
   })
 
-  setTimeout(inspectWavelets, 100)
+  setTimeout(inspectWavelets, 40)
 }
 
 const debugMode = ref(false)
