@@ -549,7 +549,7 @@ function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
     let lifetime = 10 // seconds
-    let lifetimePacket = 1.2 // seconds for PACKET events
+    let lifetimePacket = .4 // seconds for PACKET events
     let ringsFadeoutTime = 1
     let waveletFadeoutTime = 1
     let ringsLifetime = lifetime
@@ -562,12 +562,15 @@ function inspectWavelets() {
       waveletFadeoutTime = .1
 
       // Overwrite temperature if wavelet has TEMP predecessor
-      if (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C) {
-        wavelet.predecessor.event.value = wavelet.event.value.TEMP
-        // Color
-        const color = rgbColor(wavelet.predecessor.event.value, minCelsius.value, maxCelsius.value)
-        wavelet.predecessor.color = `rgb(${color[0]},${color[1]},${color[2]})`
+      if (!wavelet.predecessor ) {
+        wavelet.predecessor = { ...wavelet }
+        wavelet.predecessor.event.name = TEMP_C
       }
+      wavelet.predecessor.event.value = Number.parseFloat(wavelet.event.value.TEMP).toFixed(1)
+      // Colorize
+      const color = rgbColor(wavelet.predecessor.event.value, minCelsius.value, maxCelsius.value)
+      wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
+      wavelet.predecessor.color = `rgb(${color[0]},${color[1]},${color[2]})`
     }
 
     // Extend temperature wavelets lifetime (based on specified color disc time)
