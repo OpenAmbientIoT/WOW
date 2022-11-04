@@ -567,6 +567,7 @@ function inspectWavelets() {
         wavelet.predecessor.event.name = TEMP_C
       }
       wavelet.predecessor.event.value = Number.parseFloat(wavelet.event.value.TEMP).toFixed(1)
+      wavelet.predecessor.diskSize = diskSize.value
       // Colorize
       const color = rgbColor(wavelet.predecessor.event.value, minCelsius.value, maxCelsius.value)
       wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
