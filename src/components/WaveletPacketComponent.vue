@@ -2,20 +2,26 @@
 <template>
   <div v-if="wavelet.event.name == TEMP_C"
        :class="'shine' + (wavelet.options.fadein ? ' shine_fadein' : '' ) + (wavelet.options.fadeout ? ' shine_fadeout' : '' )"
-       :style="('left:' + (wavelet.x - wavelet.diskSize*1/2) + 'px; top:' + (wavelet.y - wavelet.diskSize*1/2) + 'px;')
+       :style="('left:' + (wavelet.x - wavelet.diskSize/2) + 'px; top:' + (wavelet.y - wavelet.diskSize/2) + 'px;')
            + ('width: ' + wavelet.diskSize*1 + 'px;' + 'height: ' + wavelet.diskSize*1 + 'px;') + ('background-color:' + wavelet.color + ';') +
            ('-webkit-filter: blur(' + wavelet.diskSize/5 + 'px)')"></div>
   <div v-else-if="wavelet.predecessor && wavelet.predecessor.event.name == TEMP_C"
        :class="'shine' + (wavelet.predecessor.options.fadein ? ' shine_fadein' : '' ) + (wavelet.predecessor.options.fadeout ? ' shine_fadeout' : '' )"
-       :style="('left:' + (wavelet.predecessor.x - wavelet.predecessor.diskSize*1/2) + 'px; top:' + (wavelet.predecessor.y - wavelet.predecessor.diskSize*1/2) + 'px;')
-           + ('width: ' + wavelet.predecessor.diskSize*1 + 'px;' + 'height: ' + wavelet.predecessor.diskSize*1 + 'px;') + ('background-color:' + wavelet.predecessor.color + ';') +
+       :style="('left:' + (wavelet.predecessor.x - wavelet.predecessor.diskSize/2) + 'px; top:' + (wavelet.predecessor.y - wavelet.predecessor.diskSize/2) + 'px;')
+           + ('width: ' + wavelet.predecessor.diskSize + 'px;' + 'height: ' + wavelet.predecessor.diskSize + 'px;') + ('background-color:' + wavelet.predecessor.color + ';') +
            ('-webkit-filter: blur(' + wavelet.predecessor.diskSize/5 + 'px)')"></div>
   <div :class="'wavelet wavelet_packet' + (wavelet.options.fadein ? ' wavelet_fadein' : '' )
     + (wavelet.options.fadeout ? ' wavelet_fadeout' : '' )
     + (wavelet.options.ringsFadeout ? ' wavelet_fadeout' : '' )"
        :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
            + ('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;')">
-    <!-- + ('background-image: url(static/wavelet-anim-last-ring.svg?v='+generate()+');') -->
+    <svg xmlns="http://www.w3.org/2000/svg" :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
+           + ('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;')">
+      <circle r="10" stroke="#fff" :stroke-width="2 * (wavelet.size/64)" fill="none" cx="50%" cy="50%">
+        <animate attributeType="XML" attributeName="r" :from="wavelet.size/20" :to="wavelet.size/2" dur="1" begin="0" repeatCount="1" keySplines="0,.69,.16,1" calcMode="spline"/>
+        <animate attributeType="CSS" attributeName="opacity" values="0;1;1;1;1;0" dur=".8" begin="0s" repeatCount="1" fill="freeze"/>
+      </circle>
+    </svg>
     <span v-if="wavelet.event.name == TEMP_C"
         :class="'wavelet__value'"
           :style="`font-size: ${wavelet.size/10 < 6 ? 6 : wavelet.size/10}px;`">{{

@@ -530,7 +530,7 @@ function runSimulation() {
     return false
   }
   connectionState.value = !connectionState.value
-  const message = generateMessage(eventsTypes)
+  const message = generateMessage(eventsTypes, idsMap.value)
   process(message)
   const divider = simulatedAverageEventsPerSecond.value > 0 ? simulatedAverageEventsPerSecond.value : 1
   setTimeout(runSimulation, 1000 / divider)
@@ -549,7 +549,7 @@ function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
     let lifetime = 10 // seconds
-    let lifetimePacket = .2 // seconds for PACKET events
+    let lifetimePacket = 1.2 // seconds for PACKET events
     let ringsFadeoutTime = 1
     let waveletFadeoutTime = 1
     let ringsLifetime = lifetime
@@ -560,6 +560,14 @@ function inspectWavelets() {
       ringsLifetime = lifetimePacket
       ringsFadeoutTime = .1
       waveletFadeoutTime = .1
+
+      // Overwrite temperature if wavelet has TEMP predecessor
+      if (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C) {
+        wavelet.predecessor.event.value = wavelet.event.value.TEMP
+        // Color
+        const color = rgbColor(wavelet.predecessor.event.value, minCelsius.value, maxCelsius.value)
+        wavelet.predecessor.color = `rgb(${color[0]},${color[1]},${color[2]})`
+      }
     }
 
     // Extend temperature wavelets lifetime (based on specified color disc time)

@@ -34,7 +34,6 @@ export default class EventsBuilder {
                         event.name = msg_piece.replace('eventName=', '')
                     }
                     if (msg_piece.includes('eventValue')) {
-
                         if (event.name == PACKET) {
                             // Packet event has JSON value
                             event.value = JSON.parse(msg_piece.replace('eventValue=', '').replace('&#44;', ','))
