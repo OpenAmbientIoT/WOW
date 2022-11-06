@@ -62,6 +62,13 @@
               Enable
             </label>
           </div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" v-model="enablePublish" id="enable-publish"
+                   @change="enablePublishSwitched">
+            <label class="form-check-label" for="enable-publish" style="color: white">
+              Publish <sup class="text-white-50">β</sup>
+            </label>
+          </div>
           <div>
             <div class="text-white-50 me-3 mb-2 small">Events per second</div>
             <input class="form-control form-control-sm mb-2" type="number" placeholder="Set amount"
@@ -326,7 +333,14 @@ const temperatureDiskTimeout = ref(15)
 
 import useBackgrounds from "@/assets/js/hooks/useBackgrounds";
 // eslint-disable-next-line
-const { backgroundImageEnabled, backgroundImage, uploadBackgroundImage, backgroundVideoEnabled, backgroundVideo, uploadBackgroundVideo } = useBackgrounds()
+const {
+  backgroundImageEnabled,
+  backgroundImage,
+  uploadBackgroundImage,
+  backgroundVideoEnabled,
+  backgroundVideo,
+  uploadBackgroundVideo
+} = useBackgrounds()
 
 
 const gridMode = ref(false)
@@ -365,11 +379,9 @@ const renderingTypes = (appSettings.renderingTypes ? reactive(appSettings.render
 const rssiResizeEvents = (appSettings.rssiResizeEvents ? reactive(appSettings.rssiResizeEvents) : reactive(rssiConfig.resizeEvents))
 
 // Event types
-let eventsTypes = reactive(appSettings.eventsTypes)
-if (appSettings.eventsTypes) {
-  if (appSettings.eventsTypes.length != eventsConfig.eventsTypes.length) {
-    eventsTypes = reactive(eventsConfig.eventsTypes)
-  }
+let eventsTypes = reactive(eventsConfig.eventsTypes)
+if (appSettings.eventsTypes && appSettings.eventsTypes.length == eventsConfig.eventsTypes.length) {
+  eventsTypes = reactive(appSettings.eventsTypes)
 }
 
 // Watch event types list changed to clear RSSI from values
@@ -499,7 +511,7 @@ function openFile(event) {
   let input = event.target;
   const reader = new FileReader();
   reader.onload = function () {
-    idsMap.value = parse(reader.result)
+    idsMap.value = parse(reader.result, eventsTypes)
     console.log('Uploaded CSV:');
     console.log(reader.result.substring(0, 200));
   };
@@ -521,9 +533,22 @@ function simulationSwitched() {
   }
 }
 
+function enablePublishSwitched() {
+  if (simulationMode.value === true) {
+    connect()
+  }
+  connectionStatus.value = 'blue'
+  publishLoop(eventsTypes, idsMap)
+}
+
 const simulatedAverageEventsPerSecond = ref(1)
 import useSimulation from "@/assets/js/hooks/useSimulation";
-const { generateMessage } = useSimulation()
+
+const {generateMessage} = useSimulation()
+
+import usePublish from "@/assets/js/hooks/usePublish";
+const {enablePublish, publishLoop} = usePublish()
+
 
 function runSimulation() {
   if (simulationMode.value === false) {
@@ -549,7 +574,7 @@ function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
     let lifetime = 10 // seconds
-    let lifetimePacket = .4 // seconds for PACKET events
+    let lifetimePacket = .6 // seconds for PACKET events
     let ringsFadeoutTime = 1
     let waveletFadeoutTime = 1
     let ringsLifetime = lifetime
@@ -562,8 +587,8 @@ function inspectWavelets() {
       waveletFadeoutTime = .1
 
       // Overwrite temperature if wavelet has TEMP predecessor
-      if (!wavelet.predecessor ) {
-        wavelet.predecessor = { ...wavelet }
+      if (!wavelet.predecessor) {
+        wavelet.predecessor = {...wavelet}
         wavelet.predecessor.event.name = TEMP_C
       }
       wavelet.predecessor.event.value = Number.parseFloat(wavelet.event.value.TEMP).toFixed(1)
@@ -689,6 +714,7 @@ import {pixi, container, ticks, drawWavelet} from "@/assets/js/hooks/usePixi";
 
 // Rendering type
 const selectedRenderingType = ref(SVG)
+
 function renderingTypeChanged(e) {
   const selected = e.target.value
   renderingTypes.forEach((type) => {
@@ -798,7 +824,7 @@ watch([
        consoleEventsNew,
        consoleRenderingInfoNew,
        consoleLifetimeInfoNew,
-       consoleFadingInfoNew,
+       consoleFadingInfoNew
      ]) => {
       if (!appSettings) {
         appSettings = {}
@@ -852,6 +878,7 @@ body
   bottom: 0
   background-color: #000
   overflow: hidden
+
   &_bg
     background-size: cover
     background-position: center

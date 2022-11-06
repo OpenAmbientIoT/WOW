@@ -18,8 +18,8 @@
     <svg :key="Date.now()" xmlns="http://www.w3.org/2000/svg" :style="('left:' + (wavelet.x - wavelet.size/2) + 'px; top:' + (wavelet.y - wavelet.size/2) + 'px;')
            + ('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;')">
       <circle r="10" stroke="#fff" :stroke-width="2 * (wavelet.size/64)" fill="none" cx="50%" cy="50%">
-        <animate attributeType="XML" attributeName="r" :from="wavelet.size/10" :to="wavelet.size/2" dur=".2" begin="0" repeatCount="1" keySplines="0,.69,.16,1" calcMode="spline"/>
-        <animate attributeType="CSS" attributeName="opacity" values="0;1;1;1;1;0" dur=".2" begin="0s" repeatCount="1" fill="freeze"/>
+        <animate attributeType="XML" attributeName="r" :from="wavelet.size/10" :to="wavelet.size/2" dur=".4" begin="0" repeatCount="1" keySplines="0,.69,.16,1" calcMode="spline"/>
+        <animate attributeType="CSS" attributeName="opacity" values="0;1;1;1;1;0" dur=".4" begin="0s" repeatCount="1" fill="freeze"/>
       </circle>
     </svg>
     <span v-if="wavelet.event.name == TEMP_C"

@@ -30,8 +30,6 @@ export default function useSimulation() {
         return 'events,tagId=' + tag + ',eventName=' + eventsType.name + ',eventValue=' + value + ',timestamp=' + Date.now()
     }
 
-
-
     return { generateMessage }
 
 }

@@ -22,11 +22,10 @@ class ClientMQTT {
             topic: 'TELEMETRY',
             qos: 0,
         }
-        //this.publish = {
-        //    topic: 'topic/from_browser',
-        //    qos: 0,
-        //    payload: '{ "msg": "Hello" }',
-        //}
+        this.publish = {
+            topic: 'TELEMETRY',
+            qos: 0,
+        }
 
         this.receivedMessages = ''
         this.qosList = [
@@ -107,8 +106,8 @@ class ClientMQTT {
         })
     }
 
-    doPublish() {
-        const {topic, qos, payload} = this.publish
+    doPublish(payload) {
+        const {topic, qos } = this.publish
         this.client.publish(topic, payload, qos, error => {
             if (error) {
                 console.log('Publish error', error)
