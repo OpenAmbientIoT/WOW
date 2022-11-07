@@ -574,7 +574,7 @@ function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
     let lifetime = 10 // seconds
-    let lifetimePacket = .6 // seconds for PACKET events
+    let lifetimePacket = .2 // seconds for PACKET events
     let ringsFadeoutTime = 1
     let waveletFadeoutTime = 1
     let ringsLifetime = lifetime
@@ -585,12 +585,12 @@ function inspectWavelets() {
       ringsLifetime = lifetimePacket
       ringsFadeoutTime = .1
       waveletFadeoutTime = .1
-
-      // Overwrite temperature if wavelet has TEMP predecessor
+      // Create TEMP_C predecessor if it's a first render to show whole wavelet (not PACKET ring) and temperature value
       if (!wavelet.predecessor) {
         wavelet.predecessor = {...wavelet}
         wavelet.predecessor.event.name = TEMP_C
       }
+      // Overwrite temperature if wavelet has TEMP predecessor
       wavelet.predecessor.event.value = Number.parseFloat(wavelet.event.value.TEMP).toFixed(1)
       wavelet.predecessor.diskSize = diskSize.value
       // Colorize
@@ -643,7 +643,7 @@ function inspectWavelets() {
     }
   })
 
-  setTimeout(inspectWavelets, 40)
+  setTimeout(inspectWavelets, 10)
 }
 
 const debugMode = ref(false)

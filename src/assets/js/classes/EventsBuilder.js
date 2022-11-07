@@ -36,7 +36,7 @@ export default class EventsBuilder {
                     if (msg_piece.includes('eventValue')) {
                         if (event.name == PACKET) {
                             // Packet event has JSON value
-                            event.value = JSON.parse(msg_piece.replace('eventValue=', '').replace('&#44;', ','))
+                            event.value = JSON.parse(msg_piece.replace('eventValue=', '').replaceAll('&#44;', ','))
                         } else {
                             // Typical event with single value
                             event.value = Number.parseFloat(msg_piece.replace('eventValue=', '')).toFixed(1)

@@ -10,5 +10,9 @@ export default class WaveletElement extends RenderingElement {
             fadeout: false,
             ringsFadeout: false,
         }
+
+        this.extension = {
+            packets: [],
+        }
     }
 }
