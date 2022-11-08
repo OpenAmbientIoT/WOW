@@ -24,7 +24,9 @@ export default class EventsBuilder {
 
 
             if (isEventEnabled) {
-                const event = {}
+                const event = {
+                    created: Date.now()
+                }
                 message_pieces.forEach(msg_piece => {
                     if (msg_piece.includes('tagId')) {
                         event.tag = msg_piece.replace('tagId=', '')

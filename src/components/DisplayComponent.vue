@@ -451,15 +451,44 @@ function process(message) {
           } else if (existing.predecessor && existing.predecessor.event.name === TEMP_C) {
             wavelet.predecessor = existing.predecessor
           }
+
           // Update current event timestamp to increase living time to predecessor
           // !!! not necessary since we are using 'wavelet.created' value
-          if (wavelet.predecessor && (wavelet.predecessor.event.timestamp > wavelet.event.timestamp)) {
-            wavelet.event.timestamp = wavelet.predecessor.event.timestamp
+          // if (wavelet.predecessor && (wavelet.predecessor.event.timestamp > wavelet.event.timestamp)) {
+          //   wavelet.event.timestamp = wavelet.predecessor.event.timestamp
+          // }
+
+          // Special rules for PACKET
+          if (event.name === PACKET) {
+
+            // Moved here from inspectWavelets() // TODO review
+            // Create TEMP_C predecessor if it's a first render to show whole wavelet (not PACKET ring) and temperature value
+            if (!wavelet.predecessor) {
+              wavelet.predecessor = {...wavelet}
+              wavelet.predecessor.event.name = TEMP_C
+            }
+            // Overwrite temperature if wavelet has TEMP predecessor
+            wavelet.predecessor.event.value = Number.parseFloat(wavelet.event.value.TEMP).toFixed(1)
+            wavelet.predecessor.diskSize = diskSize.value
+            // Colorize
+            const color = rgbColor(wavelet.predecessor.event.value, minCelsius.value, maxCelsius.value)
+            wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
+            wavelet.predecessor.color = `rgb(${color[0]},${color[1]},${color[2]})`
+
+
+            // Create packets stack to render multiply SVGs (packet coming ring peak)
+            if (existing) {
+              const existingStack = Array.from(existing.extension.packets)
+              wavelet.extension.packets = new Set(existingStack)
+              wavelet.extension.packets.add(event.created)
+            }
           }
         }
 
-        const color = rgbColor(wavelet.event.value, minCelsius.value, maxCelsius.value)
-        wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
+        //if (!wavelet.color || wavelet.color === 'rgb(255,255,255)') {
+          const color = rgbColor(wavelet.event.value, minCelsius.value, maxCelsius.value)
+          wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
+        //}
 
         // Get size
         let size = basicSize.value
@@ -547,6 +576,7 @@ import useSimulation from "@/assets/js/hooks/useSimulation";
 const {generateMessage} = useSimulation()
 
 import usePublish from "@/assets/js/hooks/usePublish";
+
 const {enablePublish, publishLoop} = usePublish()
 
 
@@ -574,30 +604,24 @@ function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
     let lifetime = 10 // seconds
-    let lifetimePacket = .2 // seconds for PACKET events
+    let lifetimePacket = 1 // seconds for PACKET events
     let ringsFadeoutTime = 1
     let waveletFadeoutTime = 1
     let ringsLifetime = lifetime
 
-    // Special case for PACKET events
+    // Special case for PACKET events (some logic moved to process())
     if (wavelet.event.name === PACKET) {
       lifetime = lifetimePacket
       ringsLifetime = lifetimePacket
       ringsFadeoutTime = .1
       waveletFadeoutTime = .1
-      // Create TEMP_C predecessor if it's a first render to show whole wavelet (not PACKET ring) and temperature value
-      if (!wavelet.predecessor) {
-        wavelet.predecessor = {...wavelet}
-        wavelet.predecessor.event.name = TEMP_C
-      }
-      // Overwrite temperature if wavelet has TEMP predecessor
-      wavelet.predecessor.event.value = Number.parseFloat(wavelet.event.value.TEMP).toFixed(1)
-      wavelet.predecessor.diskSize = diskSize.value
-      // Colorize
-      const color = rgbColor(wavelet.predecessor.event.value, minCelsius.value, maxCelsius.value)
-      wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
-      wavelet.predecessor.color = `rgb(${color[0]},${color[1]},${color[2]})`
     }
+    // Clear old packets stack (which used for rendering multiple SVG ring peaks)
+    wavelet.extension.packets.forEach(created => {
+      if (now - created > lifetimePacket * 600) {
+        wavelet.extension.packets.delete(created);
+      }
+    });
 
     // Extend temperature wavelets lifetime (based on specified color disc time)
     if (wavelet.event.name === TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C)) {
@@ -612,6 +636,9 @@ function inspectWavelets() {
     if (!wavelet.options.fadein) {
       if (consoleFadingInfo.value) console.log('Time to fadein for #' + wavelet.event.tag)
       wavelet.options.fadein = true
+      if (wavelet.predecessor) {
+        wavelet.predecessor.options.fadein = true
+      }
     }
 
     // Start fadeout for wavelet rings for temperature events earlier than fadeout whole wavelet
@@ -641,9 +668,14 @@ function inspectWavelets() {
         }
       })
     }
+
+    // Remove predecessor predecessor
+    if (wavelet.predecessor && wavelet.predecessor.predecessor) {
+      delete wavelet.predecessor.predecessor
+    }
   })
 
-  setTimeout(inspectWavelets, 10)
+  setTimeout(inspectWavelets, 20)
 }
 
 const debugMode = ref(false)

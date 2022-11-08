@@ -12,7 +12,7 @@ export default class WaveletElement extends RenderingElement {
         }
 
         this.extension = {
-            packets: [],
+            packets: new Set(),
         }
     }
 }
