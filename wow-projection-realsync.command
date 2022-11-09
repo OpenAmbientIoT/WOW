@@ -4,4 +4,4 @@ here="`dirname \"$0\"`"
 target="/"
 projectpath=$here$target
 
-perl /opt/realsync/realsync "$projectpath"
+perl /usr/local/opt/dklab_realsync/realsync "$projectpath"
