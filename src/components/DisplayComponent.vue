@@ -807,7 +807,14 @@ onMounted(() => {
     canvas.appendChild(pixi.view)
     ticks(selectedRenderingType)
   }
+
+  window.addEventListener("beforeunload", leaving);
 })
+
+function leaving() {
+  console.log('Disconnect on leaving')
+  disconnect()
+}
 
 // Saving settings
 watch([

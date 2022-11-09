@@ -5,6 +5,7 @@ export default class WaveletElement extends RenderingElement {
 
         this.type = 'wavelet'
         this.color = 'rgb(255,255,255)'
+
         this.options = {
             fadein: false,
             fadeout: false,
@@ -12,6 +13,7 @@ export default class WaveletElement extends RenderingElement {
         }
 
         this.extension = {
+            // packets contains timestamps of PACKET events to render separate ring peaks for each at once
             packets: new Set(),
         }
     }
