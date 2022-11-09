@@ -1,5 +1,5 @@
 import {trim} from "@/assets/js/helpers/trim"
-import {ACTV, PACKET} from "@/assets/js/classes/events/EventsConfig";
+import {ACTV} from "@/assets/js/classes/events/EventsConfig";
 
 export default class EventsBuilder {
     constructor() {
@@ -36,13 +36,8 @@ export default class EventsBuilder {
                         event.name = msg_piece.replace('eventName=', '')
                     }
                     if (msg_piece.includes('eventValue')) {
-                        if (event.name == PACKET) {
-                            // Packet event has JSON value
-                            event.value = JSON.parse(msg_piece.replace('eventValue=', '').replaceAll('&#44;', ','))
-                        } else {
-                            // Typical event with single value
-                            event.value = Number.parseFloat(msg_piece.replace('eventValue=', '')).toFixed(1)
-                        }
+                        // Typical event with single value
+                        event.value = Number.parseFloat(msg_piece.replace('eventValue=', '')).toFixed(1)
                         event.raw = msg_piece.replace('eventValue=', '')
                     }
                     if (msg_piece.includes('timestamp')) {

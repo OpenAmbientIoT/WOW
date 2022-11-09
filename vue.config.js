@@ -6,7 +6,7 @@ module.exports = defineConfig({
     productionSourceMap: false,
     transpileDependencies: true,
     // Change it to your path
-    publicPath: '/projects/wavelets/release',
+    publicPath: '/projects/wavelets-customer/release',
     outputDir: 'release',
     css: {
         loaderOptions: {

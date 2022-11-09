@@ -11,10 +11,5 @@ export default class WaveletElement extends RenderingElement {
             fadeout: false,
             ringsFadeout: false,
         }
-
-        this.extension = {
-            // packets contains timestamps of PACKET events to render separate ring peaks for each at once
-            packets: new Set(),
-        }
     }
 }

@@ -1,4 +1,4 @@
-import {ACTV, PACKET} from "@/assets/js/classes/events/EventsConfig";
+import {ACTV} from "@/assets/js/classes/events/EventsConfig";
 
 
 export default function useSimulation() {
@@ -22,10 +22,6 @@ export default function useSimulation() {
         const eventsType = eventsTypes[Math.floor(Math.random() * eventsTypes.length)];
         if (eventsType.name === ACTV) {
             value = Math.round((Math.random()))
-        }
-        if (eventsType.name === PACKET) {
-            value = '{"TEMP":"' + (Math.random() * (max_t - min_t) + min_t).toFixed(4) + '"' + '&#44;' + '"RSSI":"70"}'
-            console.log(value)
         }
         return 'events,tagId=' + tag + ',eventName=' + eventsType.name + ',eventValue=' + value + ',timestamp=' + Date.now()
     }

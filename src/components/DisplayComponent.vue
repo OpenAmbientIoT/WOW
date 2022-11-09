@@ -36,7 +36,7 @@
       </div>
     </template>
 
-    <div class="ui-wrapper mb-3" :style="uiConfiguration.positions[uiPosition].style">
+    <div class="ui-wrapper ui-wrapper_customer mb-3" :style="uiConfiguration.positions[uiPosition].style">
       <div class="ui-container-toggle" :style="(idsMap.size === 0 ? 'display: block !important; ' : '')">
 
         <!-- Connection status -->
@@ -60,13 +60,6 @@
                    @change="simulationSwitched">
             <label class="form-check-label" for="sim-checkbox" style="color: white">
               Enable
-            </label>
-          </div>
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" v-model="enablePublish" id="enable-publish"
-                   @change="enablePublishSwitched">
-            <label class="form-check-label" for="enable-publish" style="color: white">
-              Publish <sup class="text-white-50">β</sup>
             </label>
           </div>
           <div>
@@ -370,7 +363,7 @@ function disconnect() {
 }
 
 
-import {eventsConfig, PACKET, RSSI, TEMP_C} from "@/assets/js/classes/events/EventsConfig";
+import {eventsConfig, RSSI, TEMP_C} from "@/assets/js/classes/events/EventsConfig";
 import {renderingConfig, SVG, GIF, WEBGL} from "@/assets/js/classes/RenderingConfig";
 
 
@@ -451,38 +444,6 @@ function process(message) {
           } else if (existing.predecessor && existing.predecessor.event.name === TEMP_C) {
             wavelet.predecessor = existing.predecessor
           }
-
-          // Update current event timestamp to increase living time to predecessor
-          // !!! not necessary since we are using 'wavelet.created' value
-          // if (wavelet.predecessor && (wavelet.predecessor.event.timestamp > wavelet.event.timestamp)) {
-          //   wavelet.event.timestamp = wavelet.predecessor.event.timestamp
-          // }
-
-          // Special rules for PACKET
-          if (event.name === PACKET) {
-
-            // Moved here from inspectWavelets() // TODO review
-            // Create TEMP_C predecessor if it's a first render to show whole wavelet (not PACKET ring) and temperature value
-            if (!wavelet.predecessor) {
-              wavelet.predecessor = {...wavelet}
-              wavelet.predecessor.event.name = TEMP_C
-            }
-            // Overwrite temperature if wavelet has TEMP predecessor
-            wavelet.predecessor.event.value = Number.parseFloat(wavelet.event.value.TEMP).toFixed(1)
-            wavelet.predecessor.diskSize = diskSize.value
-            // Colorize
-            const color = rgbColor(wavelet.predecessor.event.value, minCelsius.value, maxCelsius.value)
-            wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
-            wavelet.predecessor.color = `rgb(${color[0]},${color[1]},${color[2]})`
-
-
-            // Create packets stack to render multiply SVGs (packet coming ring peak)
-            if (existing) {
-              const existingStack = Array.from(existing.extension.packets)
-              wavelet.extension.packets = new Set(existingStack)
-              wavelet.extension.packets.add(event.created)
-            }
-          }
         }
 
         //if (!wavelet.color || wavelet.color === 'rgb(255,255,255)') {
@@ -562,23 +523,10 @@ function simulationSwitched() {
   }
 }
 
-function enablePublishSwitched() {
-  if (simulationMode.value === true) {
-    connect()
-  }
-  connectionStatus.value = 'blue'
-  publishLoop(eventsTypes, idsMap)
-}
-
 const simulatedAverageEventsPerSecond = ref(1)
 import useSimulation from "@/assets/js/hooks/useSimulation";
 
 const {generateMessage} = useSimulation()
-
-import usePublish from "@/assets/js/hooks/usePublish";
-
-const {enablePublish, publishLoop} = usePublish()
-
 
 function runSimulation() {
   if (simulationMode.value === false) {
@@ -604,24 +552,9 @@ function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
     let lifetime = 10 // seconds
-    let lifetimePacket = 1 // seconds for PACKET events
     let ringsFadeoutTime = 1
     let waveletFadeoutTime = 1
     let ringsLifetime = lifetime
-
-    // Special case for PACKET events (some logic moved to process())
-    if (wavelet.event.name === PACKET) {
-      lifetime = lifetimePacket
-      ringsLifetime = lifetimePacket
-      ringsFadeoutTime = .1
-      waveletFadeoutTime = .1
-    }
-    // Clear old packets stack (which used for rendering multiple SVG ring peaks)
-    wavelet.extension.packets.forEach(created => {
-      if (now - created > lifetimePacket * 600) {
-        wavelet.extension.packets.delete(created);
-      }
-    });
 
     // Extend temperature wavelets lifetime (based on specified color disc time)
     if (wavelet.event.name === TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C)) {
@@ -932,6 +865,9 @@ body
   overflow-x: hidden
   overflow-y: auto
   scrollbar-width: none
+  &_customer
+    .ui-container-toggle
+      border-top: 4px solid #858585
 
   & > div
     display: none
