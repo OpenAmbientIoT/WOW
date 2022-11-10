@@ -20,7 +20,7 @@
     <template v-if="!wavelet.options.ringsFadeout">
       <svg v-for="(created) in wavelet.extension.packets" :key="created" xmlns="http://www.w3.org/2000/svg"
            :style="('width: ' + wavelet.size + 'px;' + 'height: ' + wavelet.size + 'px;')">
-        <circle r="10" stroke="#fff" :stroke-width="2 * (wavelet.size/64)" fill="none" cx="50%" cy="50%">
+        <circle r="10" stroke="#fff" :stroke-width="4 * (wavelet.size/64)" fill="none" cx="50%" cy="50%">
           <animate attributeType="XML" attributeName="r" :from="1" :to="wavelet.size/2" dur=".4" :begin="0"
                    repeatCount="1" keySplines="0,.69,.16,1" calcMode="spline"/>
           <animate attributeType="CSS" attributeName="opacity" values="0;1;0" dur=".4" :begin="0" repeatCount="1"
