@@ -1,24 +1,62 @@
 # Wow Projection
 
-## Project setup
+## Localhost
+
+### 1) Install Node.js
+
+Download from https://nodejs.org/en/download/ and install
+
+Check node and npm available at your system.
+Run in terminal:
+
+```bash
+node -v
+npm -v
 ```
+
+Follow https://docs.npmjs.com/downloading-and-installing-node-js-and-npm in case of issues
+
+### 2) Download source code
+
+Get required branch from this repository https://bitbucket.org/prasaanth_sab/wowprojection/src
+
+
+### 3) Project setup
+
+Run under the project folder
+
+```bash
 yarn install
 ```
 
-### Compiles and hot-reloads for development
-```
+#### 4) Compiles and hot-reloads for development
+
+It will laucnh localhost server
+Run under the project folder
+
+```bash
 yarn serve
 ```
 
 ### Compiles and minifies for production
-```
+Run under the project folder
+
+```bash
 yarn build
 ```
 
 ### Lints and fixes files
-```
+Run under the project folder
+
+```bash
 yarn lint
 ```
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
+
+## Configure MQTT connection
+
+Set params in ```src/assets/js/mqttclient.js```. 
+
+The MQTT connection configuration will be available at the UI soon.
