@@ -32,7 +32,7 @@ export function calculateAverageRssi(rssis) {
     return (sum / rssis.size).toFixed(1)
 }
 
-import {RSSI, TEMP_C, DBUG, ACTV, LOCH, GEOLOC} from "@/assets/js/classes/events/EventsConfig"
+import {RSSI, TEMP_C, PACKET, DBUG, ACTV, LOCH, GEOLOC} from "@/assets/js/classes/events/EventsConfig"
 
 /**
  * RSSI config
@@ -43,6 +43,10 @@ export const rssiConfig = {
     resizeEvents: [
         {
             event: RSSI,
+            enabled: true,
+        },
+        {
+            event: PACKET,
             enabled: true,
         },
         {

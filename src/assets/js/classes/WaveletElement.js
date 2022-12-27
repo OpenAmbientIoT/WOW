@@ -4,7 +4,7 @@ export default class WaveletElement extends RenderingElement {
         super();
 
         this.type = 'wavelet'
-        this.color = 'rgb(255,255,255)'
+        this.color = null
 
         this.options = {
             fadein: false,
@@ -12,9 +12,19 @@ export default class WaveletElement extends RenderingElement {
             ringsFadeout: false,
         }
 
-        this.extension = {
-            // packets contains timestamps of PACKET events to render separate ring peaks for each at once
-            packets: new Set(),
+        this.packets = {
+            // Stack contains timestamps of PACKET events to render separate ring peaks for each at once
+            stack: new Set(),
+            pulse: false,
+            lastPulse: 0 // timestamp
+        }
+
+        this.proximity = {
+            renderPackets: true,
+            indicator: {
+                positionShift: [0,0], // Shift position for proximity indicator (the spark in case with Walmart)
+                size: 0,
+            },
         }
     }
 }

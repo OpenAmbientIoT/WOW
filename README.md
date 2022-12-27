@@ -1,4 +1,4 @@
-# Wow Projection
+# Wow Projection / Walmart branch
 
 ## Localhost
 
@@ -16,12 +16,21 @@ npm -v
 
 Follow https://docs.npmjs.com/downloading-and-installing-node-js-and-npm in case of issues
 
-### 2) Download source code
+### 2) Install Yarn
+
+```
+npm install --global yarn
+
+# Check installation:
+yarn --version
+```
+
+### 3) Download source code
 
 Get required branch from this repository https://bitbucket.org/prasaanth_sab/wowprojection/src
 
 
-### 3) Project setup
+### 4) Project setup
 
 Run under the project folder
 
@@ -29,9 +38,9 @@ Run under the project folder
 yarn install
 ```
 
-#### 4) Compiles and hot-reloads for development
+#### 5) Compiles and hot-reloads for development
 
-It will laucnh localhost server
+It will launch localhost server
 Run under the project folder
 
 ```bash
@@ -57,6 +66,8 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 
 ## Configure MQTT connection
 
-Set params in ```src/assets/js/mqttclient.js```. 
+Use UI to setup a connection
+
+Set initial params in ```src/assets/js/hooks/useMqtt.js```.
 
 The MQTT connection configuration will be available at the UI soon.

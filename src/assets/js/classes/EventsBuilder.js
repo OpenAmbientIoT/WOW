@@ -33,10 +33,10 @@ export default class EventsBuilder {
                     }
                     // TEMP_C, DBUG, ACTV, ...
                     if (msg_piece.includes('eventName')) {
-                        event.name = msg_piece.replace('eventName=', '')
+                        event.name = String(msg_piece.replace('eventName=', ''))
                     }
                     if (msg_piece.includes('eventValue')) {
-                        if (event.name == PACKET) {
+                        if (event.name === PACKET) {
                             // Packet event has JSON value
                             event.value = JSON.parse(msg_piece.replace('eventValue=', '').replaceAll('&#44;', ','))
                         } else {

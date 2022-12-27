@@ -11,14 +11,9 @@
     </video>
 
     <!-- Wavelets to display -->
-    <!-- Canvas/webgl -->
-    <div v-if="selectedRenderingType === WEBGL" id="canvas-container"></div>
-    <!-- SVG, GIF -->
-    <template v-if="selectedRenderingType !== WEBGL">
-      <template v-for="[key, wavelet] in wavelets" :key="key">
-        <SvgWaveletComponent v-if="selectedRenderingType === SVG" :wavelet="wavelet"/>
-        <GifWaveletComponent v-if="selectedRenderingType === GIF" :wavelet="wavelet"/>
-      </template>
+    <!-- SVG -->
+    <template v-for="[key, wavelet] in wavelets" :key="key">
+      <SvgWaveletComponent :wavelet="wavelet"/>
     </template>
 
 
@@ -39,10 +34,6 @@
     <div class="ui-wrapper mb-3" :style="uiConfiguration.positions[uiPosition].style">
       <div class="ui-container-toggle" :style="(idsMap.size === 0 ? 'display: block !important; ' : '')">
 
-        <!-- Connection status -->
-        <div class="connection-status mb-3" :class="connectionStatus"
-             :style="'background-color:' + connectionStatus + '; opacity: ' + (connectionState ? 1 : .4) + ';'"></div>
-
         <!--CSV upload-->
         <div class="mb-3">
           <label for="map-file-upload" class="form-label small"><span class="text-white-50">Upload map CSV</span>
@@ -52,261 +43,520 @@
         </div>
         <hr>
 
-        <!--Simulate wavelets switch-->
-        <div>
-          <div class="text-white-50 me-3 mb-2">Simulation</div>
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" v-model="simulationMode" id="sim-checkbox"
-                   @change="simulationSwitched">
-            <label class="form-check-label" for="sim-checkbox" style="color: white">
-              Enable
-            </label>
-          </div>
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" v-model="enablePublish" id="enable-publish"
-                   @change="enablePublishSwitched">
-            <label class="form-check-label" for="enable-publish" style="color: white">
-              Publish <sup class="text-white-50">β</sup>
-            </label>
-          </div>
-          <div>
-            <div class="text-white-50 me-3 mb-2 small">Events per second</div>
-            <input class="form-control form-control-sm mb-2" type="number" placeholder="Set amount"
-                   style="max-width: 110px" v-model="simulatedAverageEventsPerSecond">
-          </div>
-        </div>
-        <hr>
+        <div class="accordion">
+          <!-- MQTT-->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-mqtt">
+                MQTT
+                <!-- Connection status -->
+                <span class="connection-status ms-1" :class="connectionStatus"
+                      :style="'background-color:' + connectionStatus + '; opacity: ' + (connectionState ? 1 : .4) + ';'"></span>
 
-        <!--Grid look switch-->
-        <div>
-          <div class="text-white-50 me-3 mb-2">Grid</div>
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" v-model="gridMode" id="grid-checkbox">
-            <label class="form-check-label" for="grid-checkbox" style="color: white">
-              Enable
-            </label>
-          </div>
-          <!-- Crosshair cursor switch        -->
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" v-model="crosshairCursor" id="crosshair-checkbox">
-            <label class="form-check-label" for="crosshair-checkbox" style="color: white">
-              Crosshair cursor
-            </label>
-          </div>
-        </div>
-        <hr>
+              </button>
+            </div>
+            <div id="accordion-item-mqtt" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="text-white-50 mb-3">
+                  <div class="text-white-50 me-3 mb-1">Publishing</div>
+                  <textarea class="form-control mb-1" id="mqtt-pub-message" rows="4"
+                            v-model="mqttMessageToSend"></textarea>
+                  <div class="d-grid gap-1">
+                    <button class="btn btn-sm btn-primary" @click="sendMqttMessage(mqttClient)">Send</button>
+                  </div>
+                </div>
+                <div class="text-white-50 mb-3">
+                  <div class="small text-muted">Events total: {{ eventsCounter }}</div>
+                  <div class="small text-muted">Events per second: {{ eventsPerSecond }}</div>
+                  <hr>
 
-        <!-- Background -->
-        <div>
-          <div class="text-white-50 me-3 mb-2">Background</div>
-          <!-- Background image -->
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" v-model="backgroundImageEnabled"
-                   id="background-image-enable-checkbox">
-            <label class="form-check-label" for="background-image-enable-checkbox" style="color: white">
-              Image
-            </label>
+                  <div class="text-white-50 me-3 mb-1">WebSocket Connection</div>
+                  <div class="small mb-4">
+                    <span class="opacity-75 fw-lighter">Host:</span> <input class="form-control form-control-sm mb-1"
+                                                                            placeholder="Host"
+                                                                            @change="updateMqttSettings()"
+                                                                            v-model="mqttHost">
+                    <span class="opacity-75 fw-lighter">Port:</span> <input class="form-control form-control-sm mb-1"
+                                                                            type="number" placeholder="Port"
+                                                                            @change="updateMqttSettings()"
+                                                                            v-model="mqttPort">
+                    <span class="opacity-75 fw-lighter">Topic:</span> <input class="form-control form-control-sm mb-1"
+                                                                             placeholder="Topic"
+                                                                             @change="updateMqttSettings()"
+                                                                             v-model="mqttTopic">
+                    <span class="opacity-75 fw-lighter">User:</span> <input class="form-control form-control-sm mb-1"
+                                                                            placeholder="User"
+                                                                            @change="updateMqttSettings()"
+                                                                            v-model="mqttUsername">
+                    <span class="opacity-75 fw-lighter">Pass:</span> <input class="form-control form-control-sm mb-1"
+                                                                            placeholder="Pass"
+                                                                            @change="updateMqttSettings()"
+                                                                            type="password"
+                                                                            v-model="mqttPassword">
+                  </div>
+                  <div class="btn-group btn-group-sm w-100" role="group">
+                    <button type="button" class="btn btn-primary w-100"
+                            v-on:click="disconnect()">Disconnect
+                    </button>
+                    <button type="button" class="btn btn-primary w-100"
+                            v-on:click="connect()">Connect
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <!-- Upload image -->
-          <div v-if="backgroundImageEnabled" class="mb-3">
-            <label for="background-image-upload" class="form-label small"><span
-                class="text-white-50">Upload image</span></label>
-            <input class="form-control form-control-sm" id="background-image-upload" type="file"
-                   @change="uploadBackgroundImage">
-          </div>
-          <!-- Background video -->
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" v-model="backgroundVideoEnabled"
-                   id="background-video-enable-checkbox">
-            <label class="form-check-label" for="background-video-enable-checkbox" style="color: white">
-              Video
-            </label>
-          </div>
-          <!-- Upload video -->
-          <div v-if="backgroundVideoEnabled" class="mb-3">
-            <label for="background-video-upload" class="form-label small"><span
-                class="text-white-50">Upload video</span></label>
-            <input class="form-control form-control-sm" id="background-video-upload" type="file"
-                   @change="uploadBackgroundVideo">
-          </div>
-        </div>
-        <hr>
 
-        <!--Coloring wavelets-->
-        <div class="form-check form-switch mb-3 d-none">
-          <input class="form-check-input" type="checkbox" v-model="isColorWavelets" id="color-wavelets-checkbox">
-          <label class="form-check-label" for="color-wavelets-checkbox" style="color: white">
-            Colorize wavelets
-          </label>
-        </div>
-        <hr class="d-none">
 
-        <!--Play sound-->
-        <div>
-          <div class="text-white-50 me-3 mb-2">Sound</div>
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" v-model="isSoundOn" id="sound-on-checkbox">
-            <label class="form-check-label" for="sound-on-checkbox" style="color: white">
-              Enable 🔉
-            </label>
+          <!-- Example-->
+          <div class="accordion-item d-none">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-example">
+                Example
+              </button>
+            </div>
+            <div id="accordion-item-example" class="accordion-collapse collapse">
+              <div class="accordion-body">
+              </div>
+            </div>
           </div>
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" v-model="isSoundSimultaneous"
-                   id="sound-simultaneous-checkbox">
-            <label class="form-check-label" for="sound-simultaneous-checkbox" style="color: white">
-              Play simultaneous
-            </label>
-          </div>
-          <!-- specify mp3 -->
-          <div class="text-white-50 small mb-2">Select mp3</div>
-          <select class="form-select form-select-sm mb-1" aria-label="" v-model="soundFileName"
-                  @change="soundFileChanged">
-            <option v-for="file in soundLibrary.files" :value="file" :key="file">{{ file }}</option>
-          </select>
-          <!-- upload mp3 -->
-          <div class="mb-3">
-            <label for="mp3-upload" class="form-label small"><span class="text-white-50">Or upload mp3</span></label>
-            <input class="form-control form-control-sm" id="mp3-upload" type="file" @change="uploadMp3">
-          </div>
-        </div>
-        <hr>
 
-        <!-- Basic wavelet size -->
-        <div>
-          <div class="text-white-50 me-3 mb-2">Basic wavelet size ↔</div>
-          <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
-                 style="max-width: 80px" v-model="basicSize">
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 32">32</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 64">64</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 128">128
-          </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 196">196
-          </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 256">256
-          </button>
-        </div>
-        <hr>
 
-        <!-- Disk size -->
-        <div>
-          <div class="text-white-50 me-3 mb-2">Disk size ↔</div>
-          <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
-                 style="max-width: 80px" v-model="diskSize">
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 32">32</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 64">64</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 128">128
-          </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 196">196
-          </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 256">256
-          </button>
-        </div>
-        <hr>
+          <!-- Simulate wavelets switch -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-simulation">
+                Simulation
+              </button>
+            </div>
+            <div id="accordion-item-simulation" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" v-model="simulationMode" id="sim-checkbox"
+                         @change="simulationSwitched">
+                  <label class="form-check-label" for="sim-checkbox" style="color: white">
+                    Enable
+                  </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" v-model="enablePublish" id="enable-publish"
+                         @change="enablePublishSwitched">
+                  <label class="form-check-label" for="enable-publish" style="color: white">
+                    Publish <sup class="text-white-50">β</sup>
+                  </label>
+                </div>
+                <div>
+                  <div class="text-white-50 me-3 mb-2 small">Events per second</div>
+                  <input class="form-control form-control-sm mb-2" type="number" placeholder="Set amount"
+                         style="max-width: 110px" v-model="simulatedAverageEventsPerSecond">
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Grid view switch -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-grid">
+                Grid
+              </button>
+            </div>
+            <div id="accordion-item-grid" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" v-model="gridMode" id="grid-checkbox">
+                  <label class="form-check-label" for="grid-checkbox" style="color: white">
+                    Enable
+                  </label>
+                </div>
+                <!-- Crosshair cursor switch        -->
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" v-model="crosshairCursor" id="crosshair-checkbox">
+                  <label class="form-check-label" for="crosshair-checkbox" style="color: white">
+                    Crosshair cursor
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Background -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-background">
+                Background
+              </button>
+            </div>
+            <div id="accordion-item-background" class="accordion-collapse collapse">
+              <div class="accordion-body"><!-- Background image -->
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" v-model="backgroundImageEnabled"
+                         id="background-image-enable-checkbox">
+                  <label class="form-check-label" for="background-image-enable-checkbox" style="color: white">
+                    Image
+                  </label>
+                </div>
+                <!-- Upload image -->
+                <div v-if="backgroundImageEnabled" class="mb-3">
+                  <label for="background-image-upload" class="form-label small"><span
+                      class="text-white-50">Upload image</span></label>
+                  <input class="form-control form-control-sm" id="background-image-upload" type="file"
+                         @change="uploadBackgroundImage">
+                </div>
+                <!-- Background video -->
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" v-model="backgroundVideoEnabled"
+                         id="background-video-enable-checkbox">
+                  <label class="form-check-label" for="background-video-enable-checkbox" style="color: white">
+                    Video
+                  </label>
+                </div>
+                <!-- Upload video -->
+                <div v-if="backgroundVideoEnabled" class="mb-3">
+                  <label for="background-video-upload" class="form-label small"><span
+                      class="text-white-50">Upload video</span></label>
+                  <input class="form-control form-control-sm" id="background-video-upload" type="file"
+                         @change="uploadBackgroundVideo">
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <!-- Rssi scale factor -->
-        <div>
-          <div class="text-white-50 me-3 mb-2">RSSI scale factor</div>
-          <input class="form-control form-control-sm mb-2 d-inline-block" type="number" placeholder="Size in pixels"
-                 style="max-width: 80px" v-model="rssiScaleFactor"> <span
-            class="text-muted small ms-3"> Average RSSI {{ averageRssi }}</span>
-          <div class="text-muted mt-1 font-monospace" style="font-size: 9px">ui size * (scale/10) * (average
-            rssi/rssi)
+          <!--Play sound-->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-sound"
+              >
+                Sound
+              </button>
+            </div>
+            <div id="accordion-item-sound" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" v-model="isSoundOn" id="sound-on-checkbox">
+                  <label class="form-check-label" for="sound-on-checkbox" style="color: white">
+                    Enable 🔉
+                  </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" v-model="isSoundSimultaneous"
+                         id="sound-simultaneous-checkbox">
+                  <label class="form-check-label" for="sound-simultaneous-checkbox" style="color: white">
+                    Play simultaneous
+                  </label>
+                </div>
+                <!-- specify mp3 -->
+                <div class="text-white-50 small mb-2">Select mp3</div>
+                <select class="form-select form-select-sm mb-1" aria-label="" v-model="soundFileName"
+                        @change="soundFileChanged">
+                  <option v-for="file in soundLibrary.files" :value="file" :key="file">{{ file }}</option>
+                </select>
+                <!-- upload mp3 -->
+                <div class="mb-3">
+                  <label for="mp3-upload" class="form-label small"><span
+                      class="text-white-50">Or upload mp3</span></label>
+                  <input class="form-control form-control-sm" id="mp3-upload" type="file" @change="uploadMp3">
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-        <hr>
 
-        <!-- Color disk timeout -->
-        <div>
-          <div class="text-white-50 me-3 mb-2">Color disk timeout, s</div>
-          <input class="form-control form-control-sm mb-2" type="number" placeholder="Amount in seconds"
-                 style="max-width: 80px" v-model="temperatureDiskTimeout">
-        </div>
-        <hr>
 
-        <!-- Min Max Temp settings -->
-        <div class="row">
-          <div class="col">
-            <div class="text-white-50 me-3 mb-2">Min t</div>
-            <input class="form-control form-control-sm mb-2" type="number" placeholder="Min t" v-model="minCelsius">
-          </div>
-          <div class="col">
-            <div class="text-white-50 me-3 mb-2">Max t</div>
-            <input class="form-control form-control-sm mb-2" type="number" placeholder="Max t" v-model="maxCelsius">
-          </div>
-        </div>
-        <hr>
+          <!-- Size-->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-sizes">
+                Size
+              </button>
+            </div>
+            <div id="accordion-item-sizes" class="accordion-collapse collapse">
+              <div class="accordion-body">
 
-        <!-- Rendering type -->
-        <div>
-          <span class="text-white-50 me-1">Rendering type</span>
-          <div class="form-check form-switch mb-1" v-for="renderingType in renderingTypes" :key="renderingType.name">
-            <input class="form-check-input" type="checkbox" v-model="renderingType.enabled"
-                   v-on:change="renderingTypeChanged" :value="renderingType.name"
-                   :id="`rendering-type-checkbox-${renderingType.name}`">
-            <label class="form-check-label" :for="`rendering-type-checkbox-${renderingType.name}`" style="color: white">
-              {{ renderingType.name }} <sup><span class="small text-white-50">{{
-                renderingType.description
-              }}</span></sup>
-            </label>
-          </div>
-        </div>
-        <hr>
+                <!-- Basic wavelet size -->
+                <div>
+                  <div class="text-white-50 me-3 mb-2">Basic wavelet size ↔</div>
+                  <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
+                         style="max-width: 80px" v-model="basicSize">
+                  <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 32">32
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 64">64
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 128">128
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 196">196
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="basicSize = 256">256
+                  </button>
+                </div>
+                <hr>
 
-        <!-- Handle events -->
-        <div>
-          <span class="text-white-50 me-1">Handle events</span>
-          <div class="form-check form-switch mb-1" v-for="eventType in eventsTypes" :key="eventType.name">
-            <input class="form-check-input" type="checkbox" v-model="eventType.enabled"
-                   :id="`handle-wavelets-checkbox-${eventType.name}`">
-            <label class="form-check-label" :for="`handle-wavelets-checkbox-${eventType.name}`" style="color: white">
-              {{ eventType.name }}
-            </label>
+                <!-- Disk size -->
+                <div>
+                  <div class="text-white-50 me-3 mb-2">Disk size ↔</div>
+                  <input class="form-control form-control-sm mb-2" type="number" placeholder="Size in pixels"
+                         style="max-width: 80px" v-model="diskSize">
+                  <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 32">32
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 64">64
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 128">128
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 196">196
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary btn-sm me-2" v-on:click="diskSize = 256">256
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="form-check form-switch mb-1">
-            <input class="form-check-input" type="checkbox" v-model="debugMode" id="debug-wavelets-checkbox">
-            <label class="form-check-label" for="debug-wavelets-checkbox" style="color: rosybrown">
-              Debug mode
-            </label>
-          </div>
-        </div>
-        <hr>
 
-        <!-- RSSI size for events -->
-        <div>
-          <span class="text-white-50 me-1">RSSI-based size</span>
-          <div class="form-check form-switch mb-1" v-for="rssiResizeEvent in rssiResizeEvents"
-               :key="rssiResizeEvent.event">
-            <input class="form-check-input" type="checkbox" v-model="rssiResizeEvent.enabled"
-                   :id="`rssi-event-size-checkbox-${rssiResizeEvent.event}`">
-            <label class="form-check-label" :for="`rssi-event-size-checkbox-${rssiResizeEvent.event}`"
-                   style="color: white">
-              {{ rssiResizeEvent.event }}
-            </label>
-          </div>
-        </div>
-        <hr>
+          <!-- Proximity -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-proximity">
+                Proximity
+              </button>
+            </div>
+            <div id="accordion-item-proximity" class="accordion-collapse collapse">
+              <div class="accordion-body">
 
-        <!-- Console log -->
-        <div>
-          <span class="text-white-50 me-1">Console log</span>
-          <div class="form-check form-switch mb-1" v-for="consoleSetting in consoleSettings" :key="consoleSetting.name">
-            <input class="form-check-input" type="checkbox" v-model="consoleSetting.state.value"
-                   :id="`console-log-checkbox-${consoleSetting.name}`">
-            <label class="form-check-label" :for="`console-log-checkbox-${consoleSetting.name}`" style="color: white">
-              {{ consoleSetting.name }}
-            </label>
+                <div class="form-check form-switch mb-1">
+                  <input class="form-check-input" type="checkbox" v-model="renderProximityPacketsStack"
+                         id="render-packets-stack">
+                  <label class="form-check-label" for="render-packets-stack"
+                         style="color: white">
+                    Render packets
+                  </label>
+                </div>
+
+                <hr>
+
+                <!-- Proximity size -->
+                <div>
+                  <div class="text-white-50 me-3 mb-2">Proximity size</div>
+                  <input class="form-control form-control-sm mb-2 d-inline-block" type="number" placeholder="Offset"
+                         style="max-width: 80px" v-model="proximityIndicatorSizeCalculationOffset"> <span
+                    class="small text-muted">Offset</span>
+                  <div></div>
+                  <input class="form-control form-control-sm mb-2 d-inline-block" type="number" placeholder="Scale"
+                         style="max-width: 80px" v-model="proximityIndicatorScaleFactor"> <span
+                    class="small text-muted">Scale</span>
+                  <div></div>
+                  <input class="form-control form-control-sm mb-2 d-inline-block" type="number" placeholder="Scale"
+                         style="max-width: 80px" v-model="proximityIndicatorSizeMultiplier"> <span
+                    class="small text-muted">Multiplier</span>
+                  <div class="text-muted mt-1 font-monospace" style="font-size: 9px">
+                    ((offset + basic size) + scale * PVAL) * multiplier
+                    <br>Result size will be: (10px&mdash;{{ basicSize }}px) * multiplier
+                    {{ proximityIndicatorSizeMultiplier }}
+                  </div>
+                </div>
+                <hr>
+
+                <!-- Proximity indicator position -->
+                <div>
+                  <div class="text-white-50 me-3 mb-2">Proximity indicator position</div>
+                  <input class="form-control form-control-sm mb-2 d-inline-block" type="number" placeholder="Offset"
+                         style="max-width: 80px" v-model="proximityIndicatorPositionShiftX"> <span
+                    class="small text-muted"> X shift</span>
+                  <div></div>
+                  <input class="form-control form-control-sm mb-2 d-inline-block" type="number" placeholder="Scale"
+                         style="max-width: 80px" v-model="proximityIndicatorPositionShiftY"> <span
+                    class="small text-muted"> Y shift</span>
+                  <div class="text-muted mt-1 font-monospace" style="font-size: 9px">
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-        <hr>
+
+          <!-- RSSI-->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-rssi">
+                RSSI
+              </button>
+            </div>
+            <div id="accordion-item-rssi" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <!-- Rssi scale factor -->
+                <div>
+                  <div class="text-white-50 me-3 mb-2">RSSI scale factor</div>
+                  <input class="form-control form-control-sm mb-2 d-inline-block" type="number"
+                         placeholder="Size in pixels"
+                         style="max-width: 80px" v-model="rssiScaleFactor"> <span
+                    class="text-muted small ms-3"> Average RSSI {{ averageRssi }}</span>
+                  <div class="text-muted mt-1 font-monospace" style="font-size: 9px">ui size * (scale/10) * (average
+                    rssi/rssi)
+                  </div>
+                </div>
+                <hr>
+                <!-- RSSI size for events -->
+                <div>
+                  <span class="text-white-50 me-1">RSSI-based size</span>
+                  <div class="form-check form-switch mb-1" v-for="rssiResizeEvent in rssiResizeEvents"
+                       :key="rssiResizeEvent.event">
+                    <input class="form-check-input" type="checkbox" v-model="rssiResizeEvent.enabled"
+                           :id="`rssi-event-size-checkbox-${rssiResizeEvent.event}`">
+                    <label class="form-check-label" :for="`rssi-event-size-checkbox-${rssiResizeEvent.event}`"
+                           style="color: white">
+                      {{ rssiResizeEvent.event }}
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rendering -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-rendering">
+                Rendering
+              </button>
+            </div>
+            <div id="accordion-item-rendering" class="accordion-collapse collapse">
+              <div class="accordion-body">
+
+                <!-- Color disk timeout -->
+                <div>
+                  <div class="text-white-50 me-3 mb-2">Color disk timeout, s</div>
+                  <input class="form-control form-control-sm mb-2" type="number" placeholder="Amount in seconds"
+                         style="max-width: 80px" v-model="temperatureDiskTimeout">
+                </div>
+                <hr>
+
+                <!-- Min Max Temp settings -->
+                <div class="row">
+                  <div class="col">
+                    <div class="text-white-50 me-3 mb-2">Min t</div>
+                    <input class="form-control form-control-sm mb-2" type="number" placeholder="Min t"
+                           v-model="minCelsius">
+                  </div>
+                  <div class="col">
+                    <div class="text-white-50 me-3 mb-2">Max t</div>
+                    <input class="form-control form-control-sm mb-2" type="number" placeholder="Max t"
+                           v-model="maxCelsius">
+                  </div>
+                </div>
+                <hr>
+
+                <!-- Rendering type -->
+                <div>
+                  <span class="text-white-50 me-1">Rendering type</span>
+                  <div class="form-check form-switch mb-1" v-for="renderingType in renderingTypes"
+                       :key="renderingType.name">
+                    <input class="form-check-input" type="checkbox" v-model="renderingType.enabled"
+                           v-on:change="renderingTypeChanged" :value="renderingType.name"
+                           :id="`rendering-type-checkbox-${renderingType.name}`">
+                    <label class="form-check-label" :for="`rendering-type-checkbox-${renderingType.name}`"
+                           style="color: white">
+                      {{ renderingType.name }} <sup><span class="small text-white-50">{{
+                        renderingType.description
+                      }}</span></sup>
+                    </label>
+                  </div>
+                </div>
+
+                <!--Coloring wavelets-->
+                <div class="form-check form-switch mb-3 d-none">
+                  <input class="form-check-input" type="checkbox" v-model="isColorWavelets"
+                         id="color-wavelets-checkbox">
+                  <label class="form-check-label" for="color-wavelets-checkbox" style="color: white">
+                    Colorize wavelets
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Events -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-events">
+                Events
+              </button>
+            </div>
+            <div id="accordion-item-events" class="accordion-collapse collapse">
+              <div class="accordion-body">
+
+                <!-- Handle events -->
+                <div>
+                  <span class="text-white-50 me-1">Handle events</span>
+                  <div class="form-check form-switch mb-1" v-for="eventType in eventsTypes" :key="eventType.name">
+                    <input class="form-check-input" type="checkbox" v-model="eventType.enabled"
+                           :id="`handle-wavelets-checkbox-${eventType.name}`">
+                    <label class="form-check-label" :for="`handle-wavelets-checkbox-${eventType.name}`"
+                           style="color: white">
+                      {{ eventType.name }}
+                    </label>
+                  </div>
+                </div>
+                <hr>
+              </div>
+            </div>
+          </div>
+
+          <!-- Debug -->
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#accordion-item-debug">
+                Debug
+              </button>
+            </div>
+            <div id="accordion-item-debug" class="accordion-collapse collapse">
+              <div class="accordion-body">
+
+                <div class="form-check form-switch mb-1">
+                  <input class="form-check-input" type="checkbox" v-model="debugMode" id="debug-wavelets-checkbox">
+                  <label class="form-check-label" for="debug-wavelets-checkbox" style="color: rosybrown">
+                    Debug mode
+                  </label>
+                </div>
+                <hr>
+                <!-- Console log -->
+                <div>
+                  <span class="text-white-50 me-1">Console log</span>
+                  <div class="form-check form-switch mb-1" v-for="consoleSetting in consoleSettings"
+                       :key="consoleSetting.name">
+                    <input class="form-check-input" type="checkbox" v-model="consoleSetting.state.value"
+                           :id="`console-log-checkbox-${consoleSetting.name}`">
+                    <label class="form-check-label" :for="`console-log-checkbox-${consoleSetting.name}`"
+                           style="color: white">
+                      {{ consoleSetting.name }}
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>  <!-- end of accordion -->
 
 
         <!--UI Position-->
-        <div>
-          <span class="text-white-50 me-3">UI position</span>
-          <button type="button" class="btn btn-outline-light btn-sm me-2" v-on:click="uiPosition = 0">↖ Left</button>
-          <button type="button" class="btn btn-outline-light btn-sm" v-on:click="uiPosition = 1">Right ↗</button>
+        <div class="ui-position-toggle">
+          <span class="text-white-50 mt-4 mb-2 me-2">UI position</span>
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-light"
+                    v-on:click="uiPosition = 0">Left
+            </button>
+            <button type="button" class="btn btn-outline-light"
+                    v-on:click="uiPosition = 1">Right
+            </button>
+          </div>
         </div>
-        <hr>
 
       </div>
 
@@ -331,6 +581,8 @@ const rssi = ref(new Map())
 const rssiScaleFactor = ref(1)
 const temperatureDiskTimeout = ref(15)
 
+import WaveletElement from "@/assets/js/classes/WaveletElement";
+
 import useBackgrounds from "@/assets/js/hooks/useBackgrounds";
 // eslint-disable-next-line
 const {
@@ -342,6 +594,21 @@ const {
   uploadBackgroundVideo
 } = useBackgrounds()
 
+import useProximity from "@/assets/js/hooks/useProximity"
+
+const {
+  calculateIndicatorSize,
+  proximityIndicatorScaleFactor,
+  proximityIndicatorSizeCalculationOffset,
+  proximityIndicatorSizeMultiplier,
+  proximityIndicatorPositionShiftX,
+  proximityIndicatorPositionShiftY,
+  renderProximityPacketsStack,
+} = useProximity()
+
+import useEventsCounter from "@/assets/js/hooks/useEventsCounter"
+
+const {eventsCounter, eventsPerSecond, eventsStartedAtMs, averageEventsPerSecond} = useEventsCounter()
 
 const gridMode = ref(false)
 const consoleEvents = ref(false)
@@ -355,32 +622,43 @@ let consoleSettings = [
   {state: consoleFadingInfo, name: 'Fading'}
 ]
 
-import mqttclient from "@/assets/js/mqttclient";
-import WaveletElement from "@/assets/js/classes/WaveletElement";
+import useMqtt from "@/assets/js/hooks/useMqtt";
 
-// eslint-disable-next-line
+const {mqttHost, mqttPort, mqttTopic, mqttUsername, mqttPassword, mqttClient, updateMqttSettings} = useMqtt()
+
+
 function connect() {
-  mqttclient.createConnection(process, renderConnection)
-  mqttclient.doSubscribe()
+  mqttClient.doUnSubscribe()
+  mqttClient.destroyConnection()
+  mqttClient.createConnection(processMessage, renderConnectionStatus)
+  mqttClient.doSubscribe()
 }
 
 function disconnect() {
-  mqttclient.doUnSubscribe()
-  mqttclient.destroyConnection()
+  mqttClient.doUnSubscribe()
+  mqttClient.destroyConnection()
+  connectionStatus.value = 'red'
 }
+
+import useSendMqttMessage from "@/assets/js/hooks/useSendMqttMessage";
+
+const {mqttMessageToSend, sendMqttMessage} = useSendMqttMessage()
 
 
 import {eventsConfig, PACKET, RSSI, TEMP_C} from "@/assets/js/classes/events/EventsConfig";
-import {renderingConfig, SVG, GIF, WEBGL} from "@/assets/js/classes/RenderingConfig";
+import {renderingConfig, SVG} from "@/assets/js/classes/RenderingConfig";
 
 
-const renderingTypes = (appSettings.renderingTypes ? reactive(appSettings.renderingTypes) : reactive(renderingConfig.types))
+let renderingTypes = reactive(renderingConfig.types)
 
-const rssiResizeEvents = (appSettings.rssiResizeEvents ? reactive(appSettings.rssiResizeEvents) : reactive(rssiConfig.resizeEvents))
+let rssiResizeEvents = reactive(rssiConfig.resizeEvents)
+if (appSettings.rssiResizeEvents && appSettings.rssiResizeEvents.length === rssiConfig.resizeEvents.length) {
+  rssiResizeEvents = reactive(appSettings.rssiResizeEvents)
+}
 
 // Event types
 let eventsTypes = reactive(eventsConfig.eventsTypes)
-if (appSettings.eventsTypes && appSettings.eventsTypes.length == eventsConfig.eventsTypes.length) {
+if (appSettings.eventsTypes && appSettings.eventsTypes.length === eventsConfig.eventsTypes.length) {
   eventsTypes = reactive(appSettings.eventsTypes)
 }
 
@@ -399,7 +677,6 @@ import {rgbColor} from "@/assets/js/helpers/temperaturecolor"
 import {humanReadableTime} from "@/assets/js/helpers/time"
 import SvgWaveletComponent from "@/components/SvgWaveletComponent"
 import GridWaveletComponent from "@/components/GridWaveletComponent"
-import GifWaveletComponent from "@/components/GifWaveletComponent"
 import EventsBuilder from "@/assets/js/classes/EventsBuilder"
 
 
@@ -412,12 +689,15 @@ const averageRssi = ref(70)
 import {toSize, rssiConfig, isRssiSizeForEventEnabled} from "@/assets/js/helpers/rssi";
 
 // Parse event message, create wavelet element, inject necessary data into wavelet
-function process(message) {
+import {isObject} from "@/assets/js/helpers/check"
+
+function processMessage(message) {
   if (gridMode.value === true) {
     return false
   }
 
   if (consoleEvents.value) console.log(message)
+
 
   if (typeof message == 'string') {
     // Get event data
@@ -443,54 +723,83 @@ function process(message) {
         const wavelet = new WaveletElement();
         wavelet.event = event
         wavelet.id = event.tag
-        // When non TEMP_C event check if we have already TEMP_C wavelet
+
+        // When non TEMP_C event check if we have already TEMP_C wavelet (to continue render of color disc)
         if (event.name !== TEMP_C && wavelets.value.has(event.tag)) {
-          const existing = wavelets.value.get(event.tag)
+          const existing = wavelets.value.get(event.tag) // existing is 100% not null here
           if (existing.event.name === TEMP_C) {
+            // Skip the all other events if TEMP_C wavelet already exists and renders
+            // (before lifetime of 10s is not passed)
+            if (existing.options.ringsFadeout !== true) {
+              return false;
+            }
             wavelet.predecessor = existing
           } else if (existing.predecessor && existing.predecessor.event.name === TEMP_C) {
             wavelet.predecessor = existing.predecessor
           }
 
-          // Update current event timestamp to increase living time to predecessor
-          // !!! not necessary since we are using 'wavelet.created' value
-          // if (wavelet.predecessor && (wavelet.predecessor.event.timestamp > wavelet.event.timestamp)) {
-          //   wavelet.event.timestamp = wavelet.predecessor.event.timestamp
-          // }
-
-          // Special rules for PACKET
+          // Special processing for PACKET events
           if (event.name === PACKET) {
 
-            // Moved here from inspectWavelets() // TODO review
-            // Create TEMP_C predecessor if it's a first render to show whole wavelet (not PACKET ring) and temperature value
-            if (!wavelet.predecessor) {
-              wavelet.predecessor = {...wavelet}
-              wavelet.predecessor.event.name = TEMP_C
+            // Non-proximity packet processing
+            if (isObject(wavelet.event.value) && !('PVAL' in wavelet.event.value)) {
+
+              // Moved here from inspectWavelets()
+              // Create TEMP_C predecessor if it's a first render to show whole wavelet (not PACKET ring) and temperature value
+              if (!wavelet.predecessor) {
+                wavelet.predecessor = {...wavelet}
+                //wavelet.predecessor.event.name = TEMP_C
+              }
+              // Overwrite temperature if wavelet has TEMP predecessor
+              //wavelet.predecessor.event.value = Number.parseFloat(wavelet.event.value.TEMP).toFixed(1)
+              wavelet.predecessor.diskSize = diskSize.value
+              // Colorize
+              const color = rgbColor(wavelet.predecessor.event.value.TEMP, minCelsius.value, maxCelsius.value)
+              const rgb = color ? `rgb(${color[0]},${color[1]},${color[2]})` : null
+              wavelet.color = rgb
+              wavelet.predecessor.color = rgb
             }
-            // Overwrite temperature if wavelet has TEMP predecessor
-            wavelet.predecessor.event.value = Number.parseFloat(wavelet.event.value.TEMP).toFixed(1)
-            wavelet.predecessor.diskSize = diskSize.value
-            // Colorize
-            const color = rgbColor(wavelet.predecessor.event.value, minCelsius.value, maxCelsius.value)
-            wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
-            wavelet.predecessor.color = `rgb(${color[0]},${color[1]},${color[2]})`
 
+            // Any PACKET
+            if (event.name === PACKET) {
 
-            // Create packets stack to render multiply SVGs (packet coming ring peak)
-            if (existing) {
-              const existingStack = Array.from(existing.extension.packets)
-              wavelet.extension.packets = new Set(existingStack)
-              wavelet.extension.packets.add(event.created)
+              // Create packets stack to render multiply SVGs (packet coming ring peak)
+              if (existing) {
+                const existingStack = Array.from(existing.packets.stack)
+                wavelet.packets.stack = new Set(existingStack)
+                wavelet.packets.stack.add(event.created)
+              }
             }
           }
         }
 
-        //if (!wavelet.color || wavelet.color === 'rgb(255,255,255)') {
-          const color = rgbColor(wavelet.event.value, minCelsius.value, maxCelsius.value)
-          wavelet.color = `rgb(${color[0]},${color[1]},${color[2]})`
-        //}
 
-        // Get size
+        // Proximity packet processing
+        if (event.name === PACKET) {
+          let isTouched = false
+          if (isObject(wavelet.event.value) && ('PVAL' in wavelet.event.value)) {
+            wavelet.proximity.indicator.positionShift = [proximityIndicatorPositionShiftX.value, proximityIndicatorPositionShiftY.value]
+            // Proximity indicator size (based on PVAL)
+            wavelet.proximity.indicator.size = calculateIndicatorSize(wavelet.event.value.PVAL, basicSize.value)
+            wavelet.proximity.renderPackets = renderProximityPacketsStack.value
+            if ('PROX' in wavelet.event.value && wavelet.event.value.PROX === '1') {
+              isTouched = true
+            }
+          }
+
+          isTouched ? wavelet.packets.pulse = true : null //!existing.packets.pulse : null
+          if (wavelet.packets.pulse) {
+            wavelet.packets.lastPulse = new Date().getTime()
+          }
+        }
+
+        if (!wavelet.color) {
+          const temp = isObject(wavelet.event.value) ? wavelet.event.value.TEMP : wavelet.event.value
+          const color = rgbColor(temp, minCelsius.value, maxCelsius.value)
+          wavelet.color = color ? `rgb(${color[0]},${color[1]},${color[2]})` : null
+        }
+
+        // Calculate size
         let size = basicSize.value
         // Try RSSI
         if (rssi.value.has(event.tag) && isRssiSizeForEventEnabled(event.name)) {
@@ -500,14 +809,22 @@ function process(message) {
           size = tagCsvData.size
         }
         wavelet.size = size
-
         wavelet.basicSize = basicSize.value
         wavelet.diskSize = diskSize.value
 
         wavelet.colored = isColorWavelets.value
         wavelet.debug = debugMode.value
         wavelet.inject(tagCsvData)
+        // Add wavelet to render list
         wavelets.value.set(event.tag, wavelet)
+
+        // Events counter (currently counting only parsed and added events)
+        eventsCounter.value++
+        if (eventsStartedAtMs.value === null) {
+          eventsStartedAtMs.value = new Date().getTime()
+        }
+        averageEventsPerSecond() // update count
+
 
         // Console
         if (consoleRenderingInfo.value) console.log('Tag ' + event.tag + ' (' + event.timestamp + ' / ' + humanReadableTime(event.timestamp) + ') is in map. Render.')
@@ -518,11 +835,6 @@ function process(message) {
             sound = new Audio(soundFilePath)
           }
           sound.play()
-        }
-
-        // Canvas Case
-        if (selectedRenderingType.value === WEBGL) {
-          drawWavelet(wavelet, basicSize)
         }
       } else {
         // Console
@@ -567,7 +879,7 @@ function enablePublishSwitched() {
     connect()
   }
   connectionStatus.value = 'blue'
-  publishLoop(eventsTypes, idsMap)
+  publishLoop(mqttClient, eventsTypes, idsMap)
 }
 
 const simulatedAverageEventsPerSecond = ref(1)
@@ -586,7 +898,7 @@ function runSimulation() {
   }
   connectionState.value = !connectionState.value
   const message = generateMessage(eventsTypes, idsMap.value)
-  process(message)
+  processMessage(message)
   const divider = simulatedAverageEventsPerSecond.value > 0 ? simulatedAverageEventsPerSecond.value : 1
   setTimeout(runSimulation, 1000 / divider)
 }
@@ -594,7 +906,7 @@ function runSimulation() {
 const connectionState = ref(true)
 const connectionStatus = ref('red')
 
-function renderConnection(status) {
+function renderConnectionStatus(status) {
   connectionState.value = !connectionState.value
   connectionStatus.value = status
 }
@@ -603,34 +915,40 @@ function renderConnection(status) {
 function inspectWavelets() {
   const now = Date.now()
   wavelets.value.forEach((wavelet) => {
-    let lifetime = 10 // seconds
+    let lifetime = 5 // seconds for wavelets
     let lifetimePacket = 1 // seconds for PACKET events
     let ringsFadeoutTime = 1
     let waveletFadeoutTime = 1
     let ringsLifetime = lifetime
 
-    // Special case for PACKET events (some logic moved to process())
-    if (wavelet.event.name === PACKET) {
-      lifetime = lifetimePacket
-      ringsLifetime = lifetimePacket
+    // Special case for PACKET events (some logic moved to processMessage())
+    if (wavelet.event.name === PACKET && !('PVAL' in wavelet.event.value)) {
+      //lifetime = lifetimePacket
+      //ringsLifetime = lifetimePacket
       ringsFadeoutTime = .1
       waveletFadeoutTime = .1
     }
+
+    if (wavelet.event.name === PACKET && 'PVAL' in wavelet.event.value) {
+      lifetime = 30
+      // If passed pulse time (.3s) then make pulse option false to remove pulse class
+      if (new Date().getTime() - wavelet.packets.lastPulse > 300) {
+        wavelet.packets.pulse = false
+      }
+    }
+
     // Clear old packets stack (which used for rendering multiple SVG ring peaks)
-    wavelet.extension.packets.forEach(created => {
+    wavelet.packets.stack.forEach(created => {
       if (now - created > lifetimePacket * 600) {
-        wavelet.extension.packets.delete(created);
+        wavelet.packets.stack.delete(created);
       }
     });
 
     // Extend temperature wavelets lifetime (based on specified color disc time)
-    if (wavelet.event.name === TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C)) {
+    if (wavelet.event.name === PACKET || wavelet.event.name === TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C)) {
       const temperatureWaveletLifetime = temperatureDiskTimeout.value
       lifetime = lifetime < temperatureWaveletLifetime ? temperatureWaveletLifetime : lifetime
     }
-
-    const milliseconds = now - wavelet.created
-    const passedSeconds = Math.floor(milliseconds / 1000)
 
     // Fadein
     if (!wavelet.options.fadein) {
@@ -642,6 +960,8 @@ function inspectWavelets() {
     }
 
     // Start fadeout for wavelet rings for temperature events earlier than fadeout whole wavelet
+    const milliseconds = now - wavelet.created
+    const passedSeconds = Math.floor(milliseconds / 1000)
     if (wavelet.event.name === TEMP_C || (wavelet.predecessor && wavelet.predecessor.event.name === TEMP_C)) {
       if (passedSeconds >= ringsLifetime - ringsFadeoutTime && !wavelet.options.ringsFadeout) {
         // Fadeout rings
@@ -660,13 +980,6 @@ function inspectWavelets() {
     if (passedSeconds >= lifetime) {
       if (consoleLifetimeInfo.value) console.log('Lifetime exceeded ' + lifetime + 's for #' + wavelet.event.tag + ' – removing')
       wavelets.value.delete(wavelet.event.tag)
-
-      // Remove from Canvas (PIXI)
-      container.children.forEach((waveletContainer) => {
-        if (wavelet.event.tag === waveletContainer.wavelet.event.tag) {
-          container.removeChild(waveletContainer)
-        }
-      })
     }
 
     // Remove predecessor predecessor
@@ -740,10 +1053,6 @@ const uiConfiguration = reactive({
   ]
 })
 
-
-import {pixi, container, ticks, drawWavelet} from "@/assets/js/hooks/usePixi";
-
-
 // Rendering type
 const selectedRenderingType = ref(SVG)
 
@@ -779,6 +1088,12 @@ onBeforeMount(() => {
     }
 
     appSettings.debugMode ? debugMode.value = appSettings.debugMode : null
+    appSettings.mqttHost ? mqttHost.value = appSettings.mqttHost : null
+    appSettings.mqttPort ? mqttPort.value = appSettings.mqttPort : null
+    appSettings.mqttTopic ? mqttTopic.value = appSettings.mqttTopic : null
+    appSettings.mqttUsername ? mqttUsername.value = appSettings.mqttUsername : null
+    appSettings.mqttPassword ? mqttPassword.value = appSettings.mqttPassword : null
+
 
     //
     appSettings.consoleEvents ? consoleEvents.value = appSettings.consoleEvents : null
@@ -800,13 +1115,6 @@ onMounted(() => {
   }
   // Remove expired wavelets
   inspectWavelets()
-
-  // Pixi / canvas / WebGL
-  const canvas = document.getElementById('canvas-container')
-  if (canvas) {
-    canvas.appendChild(pixi.view)
-    ticks(selectedRenderingType)
-  }
 
   window.addEventListener("beforeunload", leaving);
 })
@@ -832,7 +1140,6 @@ watch([
       isSoundOn,
       isSoundSimultaneous,
       soundFileName,
-      renderingTypes,
       eventsTypes,
       debugMode,
       rssiResizeEvents,
@@ -840,6 +1147,11 @@ watch([
       consoleRenderingInfo,
       consoleLifetimeInfo,
       consoleFadingInfo,
+      mqttHost,
+      mqttPort,
+      mqttTopic,
+      mqttUsername,
+      mqttPassword,
     ],
     ([
        selectedRenderingTypeNew,
@@ -856,16 +1168,22 @@ watch([
        isSoundOnNew,
        isSoundSimultaneousNew,
        soundFileNameNew,
-       renderingTypesNew,
        eventsTypesNew,
        debugModeNew,
        rssiResizeEventsNew,
        consoleEventsNew,
        consoleRenderingInfoNew,
        consoleLifetimeInfoNew,
-       consoleFadingInfoNew
+       consoleFadingInfoNew,
+       mqttHostNew,
+       mqttPortNew,
+       mqttTopicNew,
+       mqttUsernameNew,
+       mqttPasswordNew,
      ]) => {
+      console.log('Settings watcher triggered')
       if (!appSettings) {
+        console.log('No appSettings yet')
         appSettings = {}
       }
       appSettings.selectedRenderingType = selectedRenderingTypeNew
@@ -891,7 +1209,6 @@ watch([
         }
       }
 
-      appSettings.renderingTypes = renderingTypesNew
       appSettings.eventsTypes = eventsTypesNew
       appSettings.debugMode = debugModeNew
       appSettings.rssiResizeEvents = rssiResizeEventsNew
@@ -901,7 +1218,15 @@ watch([
       appSettings.consoleLifetimeInfo = consoleLifetimeInfoNew
       appSettings.consoleFadingInfo = consoleFadingInfoNew
 
+      appSettings.mqttHost = mqttHostNew
+      appSettings.mqttPort = mqttPortNew
+      appSettings.mqttTopic = mqttTopicNew
+      appSettings.mqttUsername = mqttUsernameNew
+      appSettings.mqttPassword = mqttPasswordNew
+
+      console.log('Saving setting to local storage...')
       localStorage.setItem('appSettings', JSON.stringify(appSettings))
+      console.log('Saved.')
     })
 </script>
 
@@ -925,7 +1250,7 @@ body
 
 .ui-wrapper
   position: absolute
-  width: 260px
+  width: 300px
   min-height: 100vh
   opacity: 1
   z-index: 9999
@@ -947,6 +1272,12 @@ body
 
 .ui-container-toggle
   position: absolute
+  min-height: 100vh
+  padding-bottom: 40px
+
+.ui-position-toggle
+  position: absolute
+  bottom: 10px
 
 .connection-status
   border-radius: 5px
@@ -970,13 +1301,23 @@ body
 hr
   box-shadow: 0 1px 0 0 wheat
 
-#canvas-container
-  width: 100vw
-  height: 100vh
-
 #video
   position: absolute
   width: 100vw
   height: 100vh
   object-fit: cover
+
+// Accordion
+.accordion
+  margin-bottom: 40px
+
+.accordion-item
+  background: transparent
+//border-color: rgba(33, 33, 33, .95)
+
+.accordion-body
+  background-color: rgba(0, 0, 0, .2)
+//border: 1px solid $accordion-border-color
+
+
 </style>

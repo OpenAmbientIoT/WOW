@@ -13,7 +13,9 @@ export function hueColor(temperature, minCelsius, maxCelsius) {
 }
 
 export function rgbColor(temperature, minCelsius, maxCelsius) {
-
+    if (!temperature) {
+        return null
+    }
 
     const h = hueColor(temperature, minCelsius, maxCelsius)
     let s = 100
