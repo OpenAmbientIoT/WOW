@@ -6,7 +6,7 @@ import {generate} from "@/assets/js/helpers/id"
 // TODO
 export default function useMqtt() {
     // todo probably it's not necessary to use ref()s since we are updating settings on a call (@change)
-    const mqttHost = ref('common.livingweb.app')
+    const mqttHost = ref('common.wow.equipment')
     const mqttPort = ref(9001)
     const mqttEnpoint = '/mqtt'
     const mqttClean = true
