@@ -628,8 +628,7 @@ const {mqttHost, mqttPort, mqttTopic, mqttUsername, mqttPassword, mqttClient, up
 
 
 function connect() {
-  mqttClient.doUnSubscribe()
-  mqttClient.destroyConnection()
+  updateMqttSettings()
   mqttClient.createConnection(processMessage, renderConnectionStatus)
   mqttClient.doSubscribe()
 }
@@ -1088,11 +1087,13 @@ onBeforeMount(() => {
     }
 
     appSettings.debugMode ? debugMode.value = appSettings.debugMode : null
+
     appSettings.mqttHost ? mqttHost.value = appSettings.mqttHost : null
     appSettings.mqttPort ? mqttPort.value = appSettings.mqttPort : null
     appSettings.mqttTopic ? mqttTopic.value = appSettings.mqttTopic : null
     appSettings.mqttUsername ? mqttUsername.value = appSettings.mqttUsername : null
     appSettings.mqttPassword ? mqttPassword.value = appSettings.mqttPassword : null
+
 
 
     //

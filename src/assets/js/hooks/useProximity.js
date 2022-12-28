@@ -16,7 +16,12 @@ export default function useProximity() {
      * @param {number} size UI disk size
      */
     function calculateIndicatorSize(pVal, size) {
-        const calculated = ((proximityIndicatorSizeCalculationOffset.value + size) + proximityIndicatorScaleFactor.value * pVal).toFixed(1)
+        let offset = proximityIndicatorSizeCalculationOffset.value;
+        // Prevent the fail on negative numbers
+        if (offset === '-' || offset === '') {
+            offset = 0
+        }
+        const calculated = ((offset + size) + proximityIndicatorScaleFactor.value * pVal).toFixed(1)
         return ((calculated < 10) ? 10 : (calculated > size ? size : calculated)) * proximityIndicatorSizeMultiplier.value
     }
 
