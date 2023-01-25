@@ -9490,6 +9490,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"v-drag@npm:^3.0.8":
+  version: 3.0.8
+  resolution: "v-drag@npm:3.0.8"
+  checksum: 8ce1b7b804801b7c73f36f1ec2cb078b8db38d39e7611b0f684fdf21a9ccdc9bca5744661290dfc696542f3d344b9b542e33ed07e8a4a8749e943c3ed1c41411
+  languageName: node
+  linkType: hard
+
 "v8-compile-cache@npm:^2.0.3":
   version: 2.3.0
   resolution: "v8-compile-cache@npm:2.3.0"
@@ -9640,6 +9647,7 @@ __metadata:
     node-sass: ^7.0.1
     sass: ^1.50.0
     sass-loader: ^12.6.0
+    v-drag: ^3.0.8
     vue: ^3.2.13
     vue-csv-import: ^4.1.2
     webpack: ^5.72.0

@@ -10,6 +10,8 @@
       <source :src="backgroundVideo" type="video/mp4">
     </video>
 
+    <CopyrightOverlayComponent :copyrightOverlay="copyrightOverlay"></CopyrightOverlayComponent>
+
     <!-- Wavelets to display -->
     <!-- SVG -->
     <template v-for="[key, wavelet] in wavelets" :key="key">
@@ -43,6 +45,7 @@
         </div>
         <hr>
 
+        <!-- Controls-->
         <div class="accordion">
           <!-- MQTT-->
           <div class="accordion-item">
@@ -583,6 +586,12 @@ const temperatureDiskTimeout = ref(15)
 
 import WaveletElement from "@/assets/js/classes/WaveletElement";
 
+import useCopyrightOverlay from "@/assets/js/hooks/useCopyrightOverlay";
+
+const {copyrightOverlay} = useCopyrightOverlay()
+import CopyrightOverlayComponent from "@/components/CopyrightOverlayComponent"
+
+
 import useBackgrounds from "@/assets/js/hooks/useBackgrounds";
 // eslint-disable-next-line
 const {
@@ -1093,7 +1102,6 @@ onBeforeMount(() => {
     appSettings.mqttTopic ? mqttTopic.value = appSettings.mqttTopic : null
     appSettings.mqttUsername ? mqttUsername.value = appSettings.mqttUsername : null
     appSettings.mqttPassword ? mqttPassword.value = appSettings.mqttPassword : null
-
 
 
     //
