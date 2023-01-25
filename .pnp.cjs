@@ -44,7 +44,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["node-sass", "npm:7.0.3"],\
             ["sass", "npm:1.56.0"],\
             ["sass-loader", "virtual:091dfbe2d5d442e04afcc8d77d7b270fc6765b0a0834518a38aaf78f2c995b1c3e79ff4daedb95236ce22b8a544967dfdc4079ea92c0ad08ba11f6fc48978a16#npm:12.6.0"],\
-            ["v-drag", "npm:3.0.8"],\
             ["vue", "npm:3.2.41"],\
             ["vue-csv-import", "virtual:091dfbe2d5d442e04afcc8d77d7b270fc6765b0a0834518a38aaf78f2c995b1c3e79ff4daedb95236ce22b8a544967dfdc4079ea92c0ad08ba11f6fc48978a16#npm:4.1.2"],\
             ["webpack", "virtual:091dfbe2d5d442e04afcc8d77d7b270fc6765b0a0834518a38aaf78f2c995b1c3e79ff4daedb95236ce22b8a544967dfdc4079ea92c0ad08ba11f6fc48978a16#npm:5.74.0"]\
@@ -12608,15 +12607,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
-      ["v-drag", [\
-        ["npm:3.0.8", {\
-          "packageLocation": "./.yarn/cache/v-drag-npm-3.0.8-738cfeba8f-8ce1b7b804.zip/node_modules/v-drag/",\
-          "packageDependencies": [\
-            ["v-drag", "npm:3.0.8"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
       ["v8-compile-cache", [\
         ["npm:2.3.0", {\
           "packageLocation": "./.yarn/cache/v8-compile-cache-npm-2.3.0-961375f150-adb0a271ea.zip/node_modules/v8-compile-cache/",\
@@ -12861,7 +12851,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["node-sass", "npm:7.0.3"],\
             ["sass", "npm:1.56.0"],\
             ["sass-loader", "virtual:091dfbe2d5d442e04afcc8d77d7b270fc6765b0a0834518a38aaf78f2c995b1c3e79ff4daedb95236ce22b8a544967dfdc4079ea92c0ad08ba11f6fc48978a16#npm:12.6.0"],\
-            ["v-drag", "npm:3.0.8"],\
             ["vue", "npm:3.2.41"],\
             ["vue-csv-import", "virtual:091dfbe2d5d442e04afcc8d77d7b270fc6765b0a0834518a38aaf78f2c995b1c3e79ff4daedb95236ce22b8a544967dfdc4079ea92c0ad08ba11f6fc48978a16#npm:4.1.2"],\
             ["webpack", "virtual:091dfbe2d5d442e04afcc8d77d7b270fc6765b0a0834518a38aaf78f2c995b1c3e79ff4daedb95236ce22b8a544967dfdc4079ea92c0ad08ba11f6fc48978a16#npm:5.74.0"]\
